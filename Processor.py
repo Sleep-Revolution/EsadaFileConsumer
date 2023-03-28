@@ -23,6 +23,8 @@ class ProgressMessage:
             'progrees': self.Progress
         })
 
+
+
 def process_file(message):
 
 
@@ -77,7 +79,6 @@ def process_file(message):
 def on_message(channel, method, properties, body):
     print("Recived a message")
     message = json.loads(body)
-
     process_file(message)
     channel.basic_ack(delivery_tag=method.delivery_tag)
 
