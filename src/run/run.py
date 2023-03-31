@@ -34,6 +34,7 @@ from tensorflow import keras
 import tensorflow_addons
 import pandas as pd
 import gc
+import json
 ############################ CONF POSSIBLE ############################
 
 class RunPredict:
@@ -142,6 +143,7 @@ class RunPredict:
         
         SignalName = np.array(self.generator.currentSignal.metadata["SignalName"])
         filepath = os.path.join(self.paramsPred["PredPath"],self.generator.Predictors_.allEdf[i-1]+".csv")
+        filepathJSON = os.path.join(self.paramsPred["PredPath"],self.generator.Predictors_.allEdf[i-1]+".json")
 
         Y_MM = np.fromiter(map(lambda x : self.GenerateMultiSamp(x,E=1000),Y), dtype=np.dtype((int, len(self.SCORE_DICT))))
         MMM = MixtModel(E=1000,distribution="Multinomial",filtered=True,threshold=float(self.paramsPred["GrayAreaThreshold"]))
@@ -186,12 +188,15 @@ class RunPredict:
                 Y_tmp = pd.DataFrame(Y_tmp,columns = columns)
                 DF = pd.concat((DF,Y_tmp),axis = 1)
             DF["Measure_date"] = self.generator.currentSignal.metadata["Measure date"]
-            DF.to_csv(filepath)
+            self.NOXJSON(DF,filepathJSON)
+            # DF.to_csv(filepath)
         else:
             columns = ["Times",SignalName[0]+"_Hypno"]+[SignalName[0]+"_"+k for k in list(self.SCORE_DICT.keys())]+["GrayArea"]+["Warning_"+k for k in list(warnings.keys())]
             DF = pd.DataFrame(results,columns = columns)
             DF["Measure_date"] = self.generator.currentSignal.metadata["Measure date"]
-            DF.to_csv(filepath)
+            self.NOXJSON(DF,filepathJSON)
+            
+            # DF.to_csv(filepath)
 
     def GenerateMultiSamp(self,x,E):
         x = np.array([x]).astype(np.float64)
@@ -202,7 +207,49 @@ class RunPredict:
         X,Z = gen.generate(2,distribution="Multinomial")
         return X[0,:].tolist()
     
-    
+    # Function to generate the json file for the NOX software
+    def NOXJSON(self,predcsv,filepath):
+        sleepstage = ['sleep-wake','sleep-n1','sleep-n2','sleep-n3','sleep-rem']
+        nepoch = int(predcsv.shape[0])
+        newmeasdate = (pd.to_datetime(predcsv["Measure_date"].iloc[0]).to_pydatetime())
+        if (newmeasdate.second != 0) or (newmeasdate.second != 30):
+            sub30 = 30 - newmeasdate.second
+            if sub30>15:
+                newmeasdate = newmeasdate - timedelta(seconds=newmeasdate.second)
+            else:
+                newmeasdate = newmeasdate + timedelta(seconds=sub30)
+
+        predcsv["Measure_date"] = newmeasdate
+        start_time = [(pd.to_datetime(predcsv["Measure_date"].iloc[0]).to_pydatetime())+timedelta(seconds=int(i)) for i in np.arange(predcsv.shape[0])*30]
+        starttime2YYYYMMDDHHMMSS = [i.strftime("%Y-%m-%dT%H:%M:%S.000000") for i in start_time]
+        stop_time = [(pd.to_datetime(predcsv["Measure_date"].iloc[0]).to_pydatetime())+timedelta(seconds=int(i)) for i in np.arange(predcsv.shape[0])*30+30]
+        stoptime2YYYYMMDDHHMMSS = [i.strftime("%Y-%m-%dT%H:%M:%S.000000") for i in stop_time]
+        
+        JSONHeaders = { "version": "1.0",
+        "active_scoring_name": "MatiasAlgorithm",
+        "scorings": []}
+        ListCORE = []
+
+        
+        for i in range(nepoch):
+            JSONCORE = {
+                "scoring_name": "scoring1",
+                "markers":[]}
+            JSONCORE["scoring_name"] = "scoring"+str(i+1)
+            JSONCORE["markers"] = [{
+                "label": "arbitrary_label",
+                "signal": sleepstage[int(predcsv["Ens_Hypno"].iloc[i])],
+                "start_time": starttime2YYYYMMDDHHMMSS[i],
+                "stop_time": stoptime2YYYYMMDDHHMMSS[i],
+                "scoring_type": "Automatic"
+                }]
+            JSONHeaders["scorings"].append(JSONCORE)
+            
+        with open(filepath, 'w') as outfile:
+            json.dump(JSONHeaders, outfile, indent=4)
+
+
+
     def launch(self):
         for file in range(1,self.nfile+1):
             print("-------------------------------------------------------- BEGIN PREDICTION -----------------------------------------------------------------")
