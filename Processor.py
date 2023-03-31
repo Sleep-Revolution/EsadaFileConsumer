@@ -3,9 +3,13 @@ import os
 import json
 import time
 
-creds = pika.PlainCredentials('server', 'server')
+
+creds = pika.PlainCredentials('guest', 'guest')
 # connection_params = pika.ConnectionParameters(os.environ['RABBITMQ_SERVER'], 5672, '/', self.creds)
-connection = pika.BlockingConnection(pika.ConnectionParameters(os.environ['RABBITMQ_SERVER'], 5672, '/', creds))
+connection = pika.BlockingConnection(pika.ConnectionParameters(os.environ['RABBITMQ_SERVER'], 15672, '/', creds))
+# connection = pika.BlockingConnection(pika.ConnectionParameters("localhost"))
+
+# connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
 channel = connection.channel()
 channel.exchange_declare(exchange='progress_topic', exchange_type='topic')
 queue_name = 'file_progress_queue'
@@ -40,7 +44,9 @@ def process_file(message):
             body=ProgressMessage(1, 'Convert to EDF', 0).serialise()
         )
     # Convert to EDF
-    time.sleep(30)
+    # time.sleep(30)
+    channel.basic_consume(queue='task_queue', on_message_callback=step_1_ndb_to_edf)
+
     channel.basic_publish(
             exchange='file_progress',
             routing_key=f'file_progress.{name}',
@@ -88,3 +94,4 @@ channel.basic_consume(queue='task_queue', on_message_callback=on_message)
 print("Now consuming from channel.")
 channel.start_consuming()
 connection.close()
+
