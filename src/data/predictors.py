@@ -6,8 +6,7 @@ import mne
 import re
 import pickle
 from datetime import datetime, timedelta
-from ipywidgets import IntProgress
-from IPython.display import display
+
 import sys
 # sys.path.insert(0, os.path.abspath("/main/home/gabrielj@sleep.ru.is/GrayAreaDL/"))
 from src.data.partsignal import *

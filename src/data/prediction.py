@@ -3,8 +3,7 @@ import numpy as np
 import pandas as pd 
 import os
 import re
-from ipywidgets import IntProgress
-from IPython.display import display
+
 
 class Prediction:
     def __init__(self,path_data_hypno,times_stamps = 0.005,epoch_time = 30,verbose=1,predictionName="HYPNOGRAMS"):
