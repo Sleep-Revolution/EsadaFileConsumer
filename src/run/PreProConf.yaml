@@ -1,0 +1,9 @@
+
+Preprocessing:
+  - !GrayAreaDL:Resample
+    filtering: True
+  - !GrayAreaDL:ChebyHPFilter
+    fs: 64
+    cutoff: 0.3
+  - !GrayAreaDL:IQRstd
+    quantile: None
