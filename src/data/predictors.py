@@ -79,12 +79,12 @@ class Predictors:
             TouV = 1e6
         else:
             TouV = 1
-        i = partID-1
-        fileEDF = os.path.join(self.filedir[i],self.filename[i])
+        k = partID-1
+        fileEDF = os.path.join(self.filedir[k],self.filename[k])
         if self.verbose>0:
-            print("Load Part : %s, input name: %s, ouput name: %s" % (partID,self.filename[i],self.allEdf[i]))
+            print("Load Part : %s, input name: %s, ouput name: %s" % (partID,self.filename[k],self.allEdf[k]))
 
-        tmpfile = self.filename[i]
+        tmpfile = self.filename[k]
         
         if self.type_study == "SAS":
             channel_names = self.channel_names_sas
@@ -182,8 +182,8 @@ class Predictors:
         metadata["edfstart"] = edfstart
         metadata["Measure date"] = edf.info['meas_date']
         metadata["TimeFromStart"] = times
-        metadata["FileName"] = self.allEdf[i]
-        metadata["FilePath"] = self.filedir[i]
+        metadata["FileName"] = self.allEdf[k]
+        metadata["FilePath"] = self.filedir[k]
         metadata["SignalName"] = np.array(edf.ch_names)[np.array(indcha)]
         
         _loaded_signal = PartSignal({"Signal": signals}, partID, s, metadata)

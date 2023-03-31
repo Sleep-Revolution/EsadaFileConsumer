@@ -248,8 +248,6 @@ class RunPredict:
         with open(filepath, 'w') as outfile:
             json.dump(JSONHeaders, outfile, indent=4)
 
-
-
     def launch(self):
         for file in range(1,self.nfile+1):
             print("-------------------------------------------------------- BEGIN PREDICTION -----------------------------------------------------------------")
