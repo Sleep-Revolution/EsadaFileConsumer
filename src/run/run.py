@@ -24,7 +24,6 @@ from src.data.datagenerator import *
 from src.preprocessing.harmonisation import *
 
 from src.model.model import *
-from src.model.mixturemodels import *
 
 from src.utils.yamlutils import *
 from src.utils.save_xp import *
@@ -150,12 +149,11 @@ class RunPredict:
         SignalName = np.array(self.generator.currentSignal.metadata["SignalName"])
         filepath = os.path.join(self.paramsPred["PredPath"],self.generator.Predictors_.allEdf[i-1]+".csv")
         filepathJSON = os.path.join(self.paramsPred["PredPath"],self.generator.Predictors_.allEdf[i-1]+".json")
+        
 
-        Y_MM = np.fromiter(map(lambda x : self.GenerateMultiSamp(x,E=1000),Y), dtype=np.dtype((int, len(self.SCORE_DICT))))
-        MMM = MixtModel(E=1000,distribution="Multinomial",filtered=True,threshold=float(self.paramsPred["GrayAreaThreshold"]))
-        MMM.fit(Y_MM)
-        Z_G = MMM.clusters
-        Z_G = (Z_G != (-1))*1
+        u2 = ((Y)*(1-Y)).sum(axis=1)
+        Z_G = (u2>self.threshold)*1
+
         warnings = {"10":[],"30":[],"60":[],"120":[]}
         results = np.concatenate((Hp_pred[np.newaxis].T,Y,Z_G[np.newaxis].T),axis=1)
         for k in list(warnings.keys()):
