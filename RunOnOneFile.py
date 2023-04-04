@@ -3,6 +3,7 @@ import requests
 import shutil
 import zipfile
 import datetime
+from src.run import run as Run
 
 channels = []
 noxUrlToEdf = '130.208.209.67'
@@ -52,4 +53,17 @@ def NoxToEdf(sendziplocation, getziplocation):
  
     return True, "Success!"
 
-print(NoxToEdf(file, "./tmp/"))
+
+def RunMatiasAlgorithm(edfLocation):
+    x = Run.RunPredict(edfLocation)
+    y = x.launch()
+    
+    print(y)
+
+
+
+
+# print(NoxToEdf(file, "./tmp/"))
+
+RunMatiasAlgorithm('./tmp/20211122T220007 - cc58a.edf')
+

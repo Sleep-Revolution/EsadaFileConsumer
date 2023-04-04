@@ -3,6 +3,9 @@ from tensorflow import keras
 import pickle
 import numpy as np
 import os
+
+import sys
+sys.path.insert(0,os.getcwd())
 from src.data.predictors import *
 import scipy.signal as scipy_signal
 #### Package & Functions for test

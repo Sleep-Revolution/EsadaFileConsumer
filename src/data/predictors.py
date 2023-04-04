@@ -23,9 +23,7 @@ def fmt(ticks):
 class Predictors:
     def __init__(self,path_edf_data,convuV=False,verbose=1,times_stamps=0.005,epoch_time=30,signalsNames=['C4-A1'],maxHours=10,type_study="PSG"):
         self.path_edf_data = path_edf_data
-        # self.allEdf = os.listdir(self.path_edf_data)
-        # self.allEdf.sort()
-        # self.edf_partsort = [int(s) for file in self.allEdf for s in re.findall(r'\d+', file)]
+
         self.convuV = convuV
         self.verbose = verbose
         self.times_stamps = times_stamps
@@ -33,20 +31,8 @@ class Predictors:
         self.signalsNames=signalsNames
         self.maxHours = maxHours
         self.type_study = type_study
-        
-        
-        list_dirs = [[root,file] for root, dirs, files in os.walk(self.path_edf_data) for file in files if file.endswith(".edf")]
-        self.filename= [i[1] for i in list_dirs]
-        self.filedir= [i[0] for i in list_dirs]
-        self.filedirsplit = [i.split("/")[-1] for i in self.filedir]
-        if (len(list(set(self.filename))) != len(self.filename))&(len(list(set(self.filedir))) == len(self.filedir))&(len(set(self.filedirsplit)) == len(self.filedir)):
-            self.allEdf = self.filedirsplit
-        else:
-            if (len(list(set(self.filename))) == len(self.filename)):
-                self.allEdf = [i.split(".")[0] for i in self.filename]
-            else:
-                self.allEdf = [self.type_study+str(i) for i in range(len(self.filedir))]
 
+        self.allEdf = [path_edf_data]
 
         self.exclude = [['1','1 Impedance','1-2','1-F','2','2 Impedance','2-F','Abdomen CaL','Abdomen Fast','Abdomen','Activity','Light','Audio Volume','Audio Volume dB','C3 Impedance','C4 Impedance','cRIP Flow','cRIP Sum','E1 Impedance','E2 Impedance','ECG','ECG Impedance','EDA','Elevation','F Impedance','F3 Impedance','F4 Impedance','Flow','Flow Limitation','Heart Rate','Inductance Abdom','Inductance Thora','K','Left Leg','Left Leg Impedan','M1 Impedance','M1M2','M2 Impedance','Nasal Pressure','O1 Impedance','O2 Impedance','Pulse Waveform','PosAngle','PTT','Pulse','PWA','Resp Rate','Right Leg','Right Leg Impeda','RIP Flow','RIP Phase','RIP Sum','Snore','Saturation','SpO2 B-B','Thorax Fast','Chest','Voltage (battery','Voltage bluetoo','Voltage (core)','X Axis','Y Axis','Z Axis'], 
                 ['Ambient Light A1', 'EKG Impedance', 'Pulse Wave (Plet', 'Set Pressure', 'Position', 'SpO2', 'Mask Pressure', 'PTT', 'Thorax', 'Heart Rate-0', 'Heart Rate-1','Abdomen CaL', 'Abdomen Fast', 'Abdomen', 'Activity', 'AF3 Impedance', 'AF4 Impedance', 'AF7 Impedance',  'AF8 Impedance', 'AFZ Impedance', 'Light', 'Audio', 'Audio Volume', 'Audio Volume dB', 'cRIP Flow', 'cRIP Sum', 'E1 Impedance', 'E1-E4 (Imp)','E2 Impedance', 'E2-AFZ (Imp)', 'E2-E3 (Imp)', 'E3 Impedance', 'E3-AFZ (Imp)', 'E4 Impedance', 'ECG','ECG Impedance', 'ECG LA', 'ECG LA Impedance', 'ECG LF', 'ECG LF Impedance', 'ECG RA', 'ECG RA Impedance', 'Elevation', 'EMG.Frontalis-Le', 'EMG.Frontalis-Ri', 'Flow','Flow Limitation', 'Inductance Abdom', 'Inductance Thora', 'K', 'LA-RA', 'Left Leg', 'Left Leg Impedan', 'LF-LA', 'LF-RA', 'Nasal Pressure', 'Pulse Waveform', 'PosAngle', 'Pulse','PWA', 'Resp Rate', 'Right Leg', 'Right Leg Impeda', 'RIP Flow', 'RIP Phase', 'RIP Sum', 'Snore', 'Saturation', 'SpO2 B-B', 'Thorax Fast', 'Chest', 'Voltage (battery', 'Voltage (bluetoo','Voltage (core)', 'X Axis', 'Y Axis', 'Z Axis']]
@@ -80,11 +66,11 @@ class Predictors:
         else:
             TouV = 1
         k = partID-1
-        fileEDF = os.path.join(self.filedir[k],self.filename[k])
+        fileEDF = self.allEdf[k] # os.path.join(self.filedir[k],self.filename[k])
         if self.verbose>0:
-            print("Load Part : %s, input name: %s, ouput name: %s" % (partID,self.filename[k],self.allEdf[k]))
+            print(f"Load Part : {partID}, input name: {self.allEdf[k]}")
 
-        tmpfile = self.filename[k]
+        # tmpfile = self.allEdf[k]
         
         if self.type_study == "SAS":
             channel_names = self.channel_names_sas
@@ -134,11 +120,21 @@ class Predictors:
 
         ind = [i for i in range(len(anode)) if (anode[i] in anode_tmp)&(cathode[i] in catode_tmp)]
         if len(ind)>0:
-            edf = mne.set_bipolar_reference(edf, anode=anode[ind].tolist(), cathode=cathode[ind].tolist())
+            try:
+                # for i in ind:
+                edf = mne.set_bipolar_reference(edf, anode=anode[ind].tolist(), cathode=cathode[ind].tolist(),drop_refs=False )
+            except MemoryError:
+                print("Ran out of memory.....")
+                exit()
+
 
         ind = [i for i in range(len(rename)) if rename[i] in anode_tmp]
         if len(ind)>0:
-            edf.set_channel_types(dict(zip(rename[ind], rename_category[ind])))
+            try:
+                edf.set_channel_types(dict(zip(rename[ind], rename_category[ind])))
+            except MemoryError as mem:
+                print("Ran out of memory.....")
+                exit()
 
         indcha = [i for i in range(len(edf.ch_names)) if edf.ch_names[i] in self.signalsNames]
         signals = []
@@ -183,7 +179,7 @@ class Predictors:
         metadata["Measure date"] = edf.info['meas_date']
         metadata["TimeFromStart"] = times
         metadata["FileName"] = self.allEdf[k]
-        metadata["FilePath"] = self.filedir[k]
+        metadata["FilePath"] = self.allEdf[k]
         metadata["SignalName"] = np.array(edf.ch_names)[np.array(indcha)]
         
         _loaded_signal = PartSignal({"Signal": signals}, partID, s, metadata)

@@ -48,8 +48,8 @@ class RunPredict:
         
 
       
-        ModelPath = "../E1M2_iqr_std_2021-11-04_135554/"  
-        confyml = "./PreProConf.yaml"
+        ModelPath = "matiasmodel/sas_scoring_models/E1M2_iqr_std_2021-11-04_135554/"  
+        confyml = "src/run/PreProConf.yaml"
         logging.basicConfig(level=logging.INFO)
         loader = get_conf_loader()
         with open(confyml) as file:
