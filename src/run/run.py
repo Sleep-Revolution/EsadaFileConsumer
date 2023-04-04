@@ -62,6 +62,7 @@ class RunPredict:
                            "Type_study":"SAS",
                            "GrayAreaThreshold":0.3,
                            "EDFPath":FILEPATH,
+                           "PredPath": FILEPATH[:-4] + "_PRED"
                            }
         
         self.model = keras.models.load_model(ModelPath)
