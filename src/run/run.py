@@ -93,9 +93,14 @@ class RunPredict:
     #     return y
     ###################################################################################################################
 
-    def PredictToCSV(self,file):
-        i = file
-        y = self.model.predict(self.generator.__getitem__(i),steps = 1)
+    def Predict(self,i):
+        X = self.generator.__getitem__(i)
+        for iterx in range(X.shape[0]):
+            x = X[iterx,:,:][np.newaxis,:,:]
+            if iterx==0:
+                y = self.model.predict(x)
+            else:
+                y = np.concatenate((y,self.model.predict(x)),axis=0)
         Y = y.copy()
         # print("After prediction",y.shape)
         times = self.generator.currentSignal.metadata["TimeFromStart"]
@@ -251,5 +256,5 @@ class RunPredict:
     def launch(self):
         for file in range(1,self.nfile+1):
             print("-------------------------------------------------------- BEGIN PREDICTION -----------------------------------------------------------------")
-            self.PredictToCSV(file)
+            self.Predict(file)
 
