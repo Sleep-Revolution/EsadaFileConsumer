@@ -63,7 +63,7 @@ class RunPredict:
                            "EDFPath":FILEPATH,
                            "PredPath": FILEPATH[:-4] + "_PRED"
                            }
-        
+        # self.paramsPred['SignalChannels'] = [_.lower() for _ in self.paramsPred['SignalChannels'] ]
         self.model = keras.models.load_model(ModelPath)
         print(self.model.summary())
         logging.info("Model Loaded")
@@ -152,7 +152,7 @@ class RunPredict:
         
 
         u2 = ((Y)*(1-Y)).sum(axis=1)
-        Z_G = (u2>self.threshold)*1
+        Z_G = (u2>self.paramsPred['GrayAreaThreshold'])*1
 
         warnings = {"10":[],"30":[],"60":[],"120":[]}
         results = np.concatenate((Hp_pred[np.newaxis].T,Y,Z_G[np.newaxis].T),axis=1)
