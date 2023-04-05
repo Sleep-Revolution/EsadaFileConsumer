@@ -37,12 +37,20 @@ class Predictors:
         self.exclude = [['1','1 Impedance','1-2','1-F','2','2 Impedance','2-F','Abdomen CaL','Abdomen Fast','Abdomen','Activity','Light','Audio Volume','Audio Volume dB','C3 Impedance','C4 Impedance','cRIP Flow','cRIP Sum','E1 Impedance','E2 Impedance','ECG','ECG Impedance','EDA','Elevation','F Impedance','F3 Impedance','F4 Impedance','Flow','Flow Limitation','Heart Rate','Inductance Abdom','Inductance Thora','K','Left Leg','Left Leg Impedan','M1 Impedance','M1M2','M2 Impedance','Nasal Pressure','O1 Impedance','O2 Impedance','Pulse Waveform','PosAngle','PTT','Pulse','PWA','Resp Rate','Right Leg','Right Leg Impeda','RIP Flow','RIP Phase','RIP Sum','Snore','Saturation','SpO2 B-B','Thorax Fast','Chest','Voltage (battery','Voltage bluetoo','Voltage (core)','X Axis','Y Axis','Z Axis'], 
                 ['Ambient Light A1', 'EKG Impedance', 'Pulse Wave (Plet', 'Set Pressure', 'Position', 'SpO2', 'Mask Pressure', 'PTT', 'Thorax', 'Heart Rate-0', 'Heart Rate-1','Abdomen CaL', 'Abdomen Fast', 'Abdomen', 'Activity', 'AF3 Impedance', 'AF4 Impedance', 'AF7 Impedance',  'AF8 Impedance', 'AFZ Impedance', 'Light', 'Audio', 'Audio Volume', 'Audio Volume dB', 'cRIP Flow', 'cRIP Sum', 'E1 Impedance', 'E1-E4 (Imp)','E2 Impedance', 'E2-AFZ (Imp)', 'E2-E3 (Imp)', 'E3 Impedance', 'E3-AFZ (Imp)', 'E4 Impedance', 'ECG','ECG Impedance', 'ECG LA', 'ECG LA Impedance', 'ECG LF', 'ECG LF Impedance', 'ECG RA', 'ECG RA Impedance', 'Elevation', 'EMG.Frontalis-Le', 'EMG.Frontalis-Ri', 'Flow','Flow Limitation', 'Inductance Abdom', 'Inductance Thora', 'K', 'LA-RA', 'Left Leg', 'Left Leg Impedan', 'LF-LA', 'LF-RA', 'Nasal Pressure', 'Pulse Waveform', 'PosAngle', 'Pulse','PWA', 'Resp Rate', 'Right Leg', 'Right Leg Impeda', 'RIP Flow', 'RIP Phase', 'RIP Sum', 'Snore', 'Saturation', 'SpO2 B-B', 'Thorax Fast', 'Chest', 'Voltage (battery', 'Voltage (bluetoo','Voltage (core)', 'X Axis', 'Y Axis', 'Z Axis']]
 
+        # self.rename_sas = {'af4' : 'af4-e3e4','af3' : 'af3-e3e4','af7' : 'af7-e3e4','af8' : 'af8-e3e4'}
+    
+
         self.channel_names_sas = np.array(['E1', 'E3', 'E2', 'E4', 'AF3', 'AF4', 'AF7', 'AF8', 'AFZ'])
+        # self.channel_names_sas = np.array([_.lower() for _ in self.channel_names_sas])
         self.channel_category_sas = np.array(['eog', 'eog', 'eog', 'eog', 'eeg', 'eeg', 'eeg' ,'eeg', 'eog'])
-        self.ref_channels_sas = [['E3','E4'],['eeg']]
-        self.rename_sas = {'AF4' : 'AF4-E3E4','AF3' : 'AF3-E3E4','AF7' : 'AF7-E3E4','AF8' : 'AF8-E3E4'}
+        # self.channel_names_sas = np.array([_.lower() for _ in self.channel_names_sas])
+        self.ref_channels_sas = [['e3','e4'],['eeg']]
         self.anode_sas = np.array(['E3', 'E2', 'E1', 'E2'])
+        # self.anode_sas = np.array([_.lower() for _ in self.anode_sas])
+
         self.cathode_sas = np.array(['AFZ', 'AFZ','E4', 'E3'])
+        # self.cathode_sas = np.array([_.lower() for _ in self.cathode_sas])
+
         self.rename_sas = np.array(['E1-E4', 'E2-E3', 'E3-AFZ', 'E2-AFZ'])
         self.rename_category_sas = np.array(['eog','eog','eog','eog'])
 
@@ -90,7 +98,7 @@ class Predictors:
             cathode = self.cathode_psg
             rename_category = self.rename_category_psg
             
-        raw = mne.io.read_raw_edf(fileEDF,verbose=self.verbose,exclude=exclude)
+        raw = mne.io.read_raw_edf(fileEDF,verbose=self.verbose)
          #channels to use in re-referencing (deriving) the conventional SAS channels
 
         signalsName_tmp = []

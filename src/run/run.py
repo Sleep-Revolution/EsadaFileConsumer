@@ -152,7 +152,7 @@ class RunPredict:
         
 
         u2 = ((Y)*(1-Y)).sum(axis=1)
-        Z_G = (u2>self.paramsPred['GrayAreaThreshold'])*1
+        Z_G = (u2>self.paramsPred["GrayAreaThreshold"])*1
 
         warnings = {"10":[],"30":[],"60":[],"120":[]}
         results = np.concatenate((Hp_pred[np.newaxis].T,Y,Z_G[np.newaxis].T),axis=1)
@@ -185,7 +185,7 @@ class RunPredict:
             DF = pd.DataFrame(results,columns = columns)
             for h in range(self.nsignals):
                 Y_tmp = np.array(y[h])
-                Y_tmp = normalize(Y_tmp,norm="l1")
+                Y_tmp = Y_tmp/Y_tmp.sum(axis=1,keepdims=True)
                 Hp_pred = np.argmax(Y_tmp,axis=1)
                 Y_tmp = np.concatenate((Hp_pred[np.newaxis].T,Y_tmp),axis=1)
                 columns = [SignalName[h]+"_Hypno"]+[SignalName[h]+"_"+k for k in list(self.SCORE_DICT.keys())]
@@ -201,15 +201,6 @@ class RunPredict:
             self.NOXJSON(DF,filepathJSON)
             
             # DF.to_csv(filepath)
-
-    def GenerateMultiSamp(self,x,E):
-        x = np.array([x]).astype(np.float64)
-        if sum(x.sum(axis=1)) != 1:
-            x[0,:] = x[0,:]/sum(x[0,:])
-
-        gen = GenMixtSampleFromCatEns(E,x)
-        X,Z = gen.generate(2,distribution="Multinomial")
-        return X[0,:].tolist()
     
     # Function to generate the json file for the NOX software
     def NOXJSON(self,predcsv,filepath):

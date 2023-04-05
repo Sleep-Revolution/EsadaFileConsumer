@@ -9,7 +9,7 @@ channels = []
 noxUrlToEdf = '130.208.209.67'
 noxUrlScoring = '130.208.209.68'
 noxUrlToSAS = '130.208.209.71'
-file = '/home/benedikt/Downloads/benedikt3night.zip'
+file = '/mnt/foobar/Benedikt/TestRecording/Day1.zip'
 
 
 
@@ -63,7 +63,13 @@ def RunMatiasAlgorithm(edfLocation):
 
 
 
-# print(NoxToEdf(file, "./tmp/"))
+print(NoxToEdf(file, "./tmp3/"))
+# 
+RunMatiasAlgorithm('./tmp3/Day1.edf')
 
-RunMatiasAlgorithm('./tmp/20211122T220007 - cc58a.edf')
-
+#  -> Posting Nox zip to service
+#          <- Done posting Nox zip to service
+#          <-- It took 0:43:40.178262 seconds....
+#          -> Extracting Zipped EDF folder
+#          <- Done extracting Zipped EDF folder
+# (True, 'Success!')
