@@ -100,8 +100,16 @@ class Predictors:
             
         raw = mne.io.read_raw_edf(fileEDF,verbose=self.verbose)
          #channels to use in re-referencing (deriving) the conventional SAS channels
+        
+        # check existence of channel_names in raw ch_names
+        if not all([i in raw.ch_names for i in channel_names]):
+            # Select subset of channel_names only if present in raw ch_names:
+            channel_names = np.array([i for i in channel_names if i in raw.ch_names])
+            print(f"Only {channel_names} available in {fileEDF}")
+        else:
+            print(f"All channels available in {fileEDF}")
 
-        signalsName_tmp = []
+        signalsName_tmp = []    
         anode_tmp = []
         catode_tmp = []
         for i in self.signalsNames:
