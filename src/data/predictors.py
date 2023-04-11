@@ -44,7 +44,7 @@ class Predictors:
         # self.channel_names_sas = np.array([_.lower() for _ in self.channel_names_sas])
         self.channel_category_sas = np.array(['eog', 'eog', 'eog', 'eog', 'eeg', 'eeg', 'eeg' ,'eeg', 'eog'])
         # self.channel_names_sas = np.array([_.lower() for _ in self.channel_names_sas])
-        self.ref_channels_sas = [['e3','e4'],['eeg']]
+        self.ref_channels_sas = [['E3','E4'],['eeg']]
         self.anode_sas = np.array(['E3', 'E2', 'E1', 'E2'])
         # self.anode_sas = np.array([_.lower() for _ in self.anode_sas])
 

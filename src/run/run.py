@@ -148,7 +148,7 @@ class RunPredict:
         
         SignalName = np.array(self.generator.currentSignal.metadata["SignalName"])
         filepath = os.path.join(self.paramsPred["PredPath"],self.generator.Predictors_.allEdf[i-1]+".csv")
-        filepathJSON = os.path.join(self.paramsPred["PredPath"],self.generator.Predictors_.allEdf[i-1]+".json")
+        filepathJSON = self.paramsPred["PredPath"]+".json"
         
 
         u2 = ((Y)*(1-Y)).sum(axis=1)

@@ -4,14 +4,15 @@ import shutil
 import zipfile
 import datetime
 from src.run import run as Run
-
+import uuid
 channels = []
 noxUrlToEdf = '130.208.209.67'
 noxUrlScoring = '130.208.209.68'
 noxUrlToSAS = '130.208.209.71'
-file = '/mnt/foobar/Benedikt/TestRecording/Day1.zip'
+file = '/mnt/foobar/Benedikt/TestRecording/Day1_test2.zip'
+tmpFolder = 'temp_uuids'
 
-
+onetimeuuid = uuid.uuid4()
 
 def NoxToEdf(sendziplocation, getziplocation):
     files = {'nox_zip': open(sendziplocation, 'rb'), 'type':'application/x-zip-compressed'}
@@ -32,26 +33,31 @@ def NoxToEdf(sendziplocation, getziplocation):
         return False, f"Requests error for {dir}", e
     # Check the status code
     if r.status_code > 299:
-        return False, f"Status {r.status_code} for recording {dir}"
+        return False, f"Status {r.status_code} for recording {dir}", None
     # Write the response to a file.
     try:
-        with open(os.path.join(getziplocation, "foo.zip"), 'wb') as f:
+        with open(os.path.join(getziplocation, "edfzip.zip"), 'wb') as f:
             shutil.copyfileobj(r.raw, f)
     except:
-        return False, f"Failed to save the edf.zip for recording {dir}"
+        return False, f"Failed to save the edf.zip for recording {dir}", None
 
     try:
     # Extract the zip file to the destination folder.
         print("\t -> Extracting Zipped EDF folder")
 
-        with zipfile.ZipFile(os.path.join(getziplocation, "foo.zip"), 'r') as f:
+        with zipfile.ZipFile(os.path.join(getziplocation, "edfzip.zip"), 'r') as f:
             f.extractall(os.path.join(getziplocation))
             f.close()
-        print("\t <- Done extracting Zipped EDF folder")
+        print("\t <- Done extracting Zipped EDF folder into", os.path.join(getziplocation))
     except:
-        return False, f"Failed to extract response from nox for recording {dir} ({getziplocation})"
- 
-    return True, "Success!"
+        return False, f"Failed to extract response from nox for recording {dir} ({getziplocation})", None
+    
+    # Find the new zip file name
+    efl = list(filter(lambda x: '.edf' in x, os.listdir(os.path.join(getziplocation))))
+    if len(efl) != 1:
+        return False, f"Did not find 1 edf file in list of new files. {efl}", None
+
+    return True, "success", efl[0]
 
 
 def RunMatiasAlgorithm(edfLocation):
@@ -61,11 +67,17 @@ def RunMatiasAlgorithm(edfLocation):
     print(y)
 
 
+# def RunSasService(RecordingLocation):
 
+#     sendziplocation = 
 
-print(NoxToEdf(file, "./tmp3/"))
+projectLocation = os.path.join(tmpFolder, str(onetimeuuid))
+os.makedirs(projectLocation, exist_ok=True)
+# edfLocation = os.path.join(projectLocation, "edf.edf")
+
+Success, Message, edfName = NoxToEdf(file, projectLocation)
 # 
-RunMatiasAlgorithm('./tmp3/Day1.edf')
+RunMatiasAlgorithm(os.path.join(projectLocation, edfName))
 
 #  -> Posting Nox zip to service
 #          <- Done posting Nox zip to service
