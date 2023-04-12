@@ -88,7 +88,7 @@ def RunSasService(RecordingLocation):
             print("Bad number of folders inside extracted nox recording!")
             return False, "Bad number of folders inside extracted NOX recording"
     except:
-        return False, f"Failed to extract NO20502050X for recording {dir} ({RecordingLocation})", None
+        return False, f"Failed to extract NOX for recording {dir} ({RecordingLocation})", None
 
 
     dir = os.listdir(unzipLocation)[0]
@@ -115,18 +115,18 @@ def RunSasService(RecordingLocation):
         return False, "Failed to Write to SAS ZIP location!", None
 
 
-    
+
 
     
 os.makedirs(projectLocation, exist_ok=True)
 
 
-# Success, Message, edfName = NoxToEdf(file, projectLocation)
+Success, Message, edfName = NoxToEdf(file, projectLocation)
 
-# RunMatiasAlgorithm(os.path.join(projectLocation, edfName))
-
+RunMatiasAlgorithm(os.path.join(projectLocation, edfName))
 
 RunSasService(file)
+
 
 
 

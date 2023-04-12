@@ -206,8 +206,8 @@ class RunPredict:
     # Function to generate the json file for the NOX software
     def NOXSAS(self,pathndb):
         NOX_sas_call = NOXSASAPI()
-        self.NOX_sas_result = NOX_sas_call.get_job_results(pathndb)
-        self.NOXSASJSON = self.NOX_sas_result
+        # self.NOX_sas_result = 
+        self.NOXSASJSON = NOX_sas_call.get_job_results(pathndb)
         
 
 
