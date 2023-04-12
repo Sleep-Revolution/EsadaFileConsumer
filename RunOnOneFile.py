@@ -3,8 +3,9 @@ import requests
 import shutil
 import zipfile
 import datetime
-from src.run import run as Run
+# from src.run import run as Run
 import uuid
+import pathlib
 channels = []
 noxUrlToEdf = '130.208.209.67'
 noxUrlScoring = '130.208.209.68'
@@ -63,21 +64,69 @@ def NoxToEdf(sendziplocation, getziplocation):
 def RunMatiasAlgorithm(edfLocation):
     x = Run.RunPredict(edfLocation)
     y = x.launch()
-    
     print(y)
 
-
-# def RunSasService(RecordingLocation):
-
-#     sendziplocation = 
-
 projectLocation = os.path.join(tmpFolder, str(onetimeuuid))
-os.makedirs(projectLocation, exist_ok=True)
-# edfLocation = os.path.join(projectLocation, "edf.edf")
 
-Success, Message, edfName = NoxToEdf(file, projectLocation)
-# 
-RunMatiasAlgorithm(os.path.join(projectLocation, edfName))
+def RunSasService(RecordingLocation):
+    requiredSignals = ['e3.ndf', 'e1.ndf', 'af7.ndf', 'af3.ndf', 'af4.ndf','af8.ndf', 'e2.ndf', 'e4.ndf']
+    unzipLocation = os.path.join(projectLocation, 'Recording_unzipped')
+    sasZipLocation = os.path.join(projectLocation, 'SAS.zip')
+    os.mkdir(unzipLocation)
+    try:
+    # Extract the zip file to the destination folder.
+        print("\t -> Extracting Zipped NOX folder")
+
+        with zipfile.ZipFile(RecordingLocation, 'r') as f:
+            f.extractall(unzipLocation)
+            f.close()
+        print("\t <- Done extracting Zipped NOX folder into", unzipLocation)
+        if len(os.listdir(unzipLocation)) != 1:
+            print("Bad number of folders inside extracted nox recording!")
+            return False, "Bad number of folders inside extracted NOX recording"
+    except:
+        return False, f"Failed to extract NO20502050X for recording {dir} ({RecordingLocation})", None
+
+
+    dir = os.listdir(unzipLocation)[0]
+    flist = list(os.listdir(os.path.join(unzipLocation, dir )))
+    for reqSignal in requiredSignals:
+        if reqSignal not in flist:
+            print(f"{RecordingLocation} is not a valid recording, {reqSignal} is not in list of files.")
+            return False, "", None
+    try:
+        directory = pathlib.Path(unzipLocation)
+        with zipfile.ZipFile(sasZipLocation, mode="w") as archive:
+            i = 1
+            n = len(list(directory.rglob(f"{dir}/*")))
+            for file_path in directory.rglob(f"{dir}/*"):
+                fname = str(file_path).split('/')[-1]
+                if fname not in requiredSignals:
+                    print(f"\t\t -x- Skipping {fname} in Zip")
+                    continue
+                if True:
+                    fpath = str(file_path).split('/')[-1]
+                    print(f"\t\t --> Zipping {fname} ({i}/{n})")
+                archive.write(file_path, arcname=file_path.relative_to(directory)) 
+    except:
+        return False, "Failed to Write to SAS ZIP location!", None
+
+
+    
+
+    
+os.makedirs(projectLocation, exist_ok=True)
+
+
+# Success, Message, edfName = NoxToEdf(file, projectLocation)
+
+# RunMatiasAlgorithm(os.path.join(projectLocation, edfName))
+
+
+RunSasService(file)
+
+
+
 
 #  -> Posting Nox zip to service
 #          <- Done posting Nox zip to service
