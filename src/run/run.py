@@ -24,6 +24,7 @@ from src.data.datagenerator import *
 from src.preprocessing.harmonisation import *
 
 from src.model.model import *
+from src.model.noxsasapi import *
 
 from src.utils.yamlutils import *
 from src.utils.save_xp import *
@@ -84,6 +85,7 @@ class RunPredict:
                                 pipeline=self.pipeline_prepro,
                                                type_study=self.type_study)
         self.nfile = len(self.generator.list_id)
+        self.NOXSASJSON = []
     
     #################################     UNCOMMENT  ONLY FOR VALIDATION          ###########################################################
     # def MathiasValidation(self,file):
@@ -179,7 +181,6 @@ class RunPredict:
                 results = np.concatenate((results,warnings[k][np.newaxis].T),axis=1)
         results = np.concatenate((times[np.newaxis].T,results),axis=1)
         print(f"Save: {filepath}")
-        print("------------------------------------------------------------ END PREDICTION -------------------------------------------------------------")
         if ((self.all) & (self.ensemble)):
             columns = ["Times","Ens_Hypno"]+["Ens_"+k for k in list(self.SCORE_DICT.keys())]+["GrayArea"]+["Warning_"+k for k in list(warnings.keys())]
             DF = pd.DataFrame(results,columns = columns)
@@ -203,6 +204,14 @@ class RunPredict:
             # DF.to_csv(filepath)
     
     # Function to generate the json file for the NOX software
+    def NOXSAS(self,pathndb):
+        NOX_sas_call = NOXSASAPI()
+        self.NOX_sas_result = NOX_sas_call.get_job_results(pathndb)
+        self.NOXSASJSON = self.NOX_sas_result
+        
+
+
+    # Function to generate the json file for the NOX software
     def NOXJSON(self,predcsv,filepath):
         sleepstage = ['sleep-wake','sleep-n1','sleep-n2','sleep-n3','sleep-rem']
         nepoch = int(predcsv.shape[0])
@@ -225,26 +234,32 @@ class RunPredict:
         "scorings": []}
         ListCORE = []
 
-        
+        JSONCORE = {
+            "scoring_name": JSONHeaders["active_scoring_name"],
+            "markers":[]}
         for i in range(nepoch):
-            JSONCORE = {
-                "scoring_name": "scoring1",
-                "markers":[]}
-            JSONCORE["scoring_name"] = "scoring"+str(i+1)
-            JSONCORE["markers"] = [{
-                "label": "arbitrary_label",
-                "signal": sleepstage[int(predcsv["Ens_Hypno"].iloc[i])],
+            markers = {
+                "label": sleepstage[int(predcsv["Ens_Hypno"].iloc[i])],
+                "signal":   None,
                 "start_time": starttime2YYYYMMDDHHMMSS[i],
                 "stop_time": stoptime2YYYYMMDDHHMMSS[i],
                 "scoring_type": "Automatic"
-                }]
-            JSONHeaders["scorings"].append(JSONCORE)
-            
+                }
+            JSONCORE["markers"].append(markers)
+        JSONHeaders["scorings"].append(JSONCORE)
+        
+        if len(self.NOXSASJSON)>0:
+            for i in range(len(self.NOXSASJSON["scorings"])):
+                JSONHeaders["scorings"].append(self.NOXSASJSON["scorings"][i])
         with open(filepath, 'w') as outfile:
             json.dump(JSONHeaders, outfile, indent=4)
 
     def launch(self):
+        print("-------------------------------------------------------- BEGIN PREDICTION -----------------------------------------------------------------")
+        filezip = [f for f in os.listdir(self.paramsPred["EDFPath"]) if f.endswith(".zip")]
+        self.NOXSAS(os.path.join(self.paramsPred["EDFPath"],filezip[0]))
         for file in range(1,self.nfile+1):
-            print("-------------------------------------------------------- BEGIN PREDICTION -----------------------------------------------------------------")
             self.Predict(file)
+        
+        print("------------------------------------------------------------ END PREDICTION -------------------------------------------------------------")
 

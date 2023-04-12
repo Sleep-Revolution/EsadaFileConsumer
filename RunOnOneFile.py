@@ -53,6 +53,9 @@ def NoxToEdf(sendziplocation, getziplocation):
     except:
         return False, f"Failed to extract response from nox for recording {dir} ({getziplocation})", None
     
+    # Delete the zip file.
+    os.remove(os.path.join(getziplocation, "edfzip.zip"))
+    
     # Find the new zip file name
     efl = list(filter(lambda x: '.edf' in x, os.listdir(os.path.join(getziplocation))))
     if len(efl) != 1:
