@@ -3,9 +3,11 @@ import requests
 import shutil
 import zipfile
 import datetime
-# from src.run import run as Run
+from src.run import run as Run
+from src.model import noxsasapi as nsa
 import uuid
 import pathlib
+
 channels = []
 noxUrlToEdf = '130.208.209.67'
 noxUrlScoring = '130.208.209.68'
@@ -65,9 +67,30 @@ def NoxToEdf(sendziplocation, getziplocation):
 
 
 def RunMatiasAlgorithm(edfLocation):
-    x = Run.RunPredict(edfLocation)
-    y = x.launch()
-    print(y)
+    try:
+        x = Run.RunPredict(edfLocation)
+        y = x.launch()
+    except Exception as e:	
+        return False, f"Failed to run Matias algorithm for recording {edfLocation}", e
+    return True, "Success", y
+
+def RunNOXSAS(projectLocation):
+    try:
+        filezip = [f for f in os.listdir(projectLocation) if f.endswith(".zip")]
+        NOX_sas_call = nsa.NOXSASAPI()
+        NOXSASJSON = NOX_sas_call.get_job_results(os.path.join(projectLocation, filezip[0]))
+    except Exception as e:
+        return False, f"Failed to run NOX SAS for recording {os.path.join(projectLocation, filezip[0])}", e
+    
+    return True, "Success", NOXSASJSON
+
+def JSONMerge(JSONMatias,JSONNOX):
+    try:
+        for i in range(len(JSONNOX["scorings"])):
+            JSONMatias["scorings"].append(JSONNOX["scorings"][i])
+    except Exception as e:
+        return False, f"Failed to merge JSON", e
+    return True, "Success", JSONMatias
 
 projectLocation = os.path.join(tmpFolder, str(onetimeuuid))
 
@@ -122,8 +145,11 @@ os.makedirs(projectLocation, exist_ok=True)
 
 
 Success, Message, edfName = NoxToEdf(file, projectLocation)
+Success, Message, JSONN = RunNOXSAS(projectLocation)
+Success, Message, JSONM = RunMatiasAlgorithm(os.path.join(projectLocation, edfName))
+Success, Message, JSONM = JSONMerge(JSONM,JSONN)
+print(Message)
 
-RunMatiasAlgorithm(os.path.join(projectLocation, edfName))
 
 RunSasService(file)
 

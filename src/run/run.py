@@ -203,12 +203,6 @@ class RunPredict:
             
             # DF.to_csv(filepath)
     
-    # Function to generate the json file for the NOX software
-    def NOXSAS(self,pathndb):
-        NOX_sas_call = NOXSASAPI()
-        # self.NOX_sas_result = 
-        self.NOXSASJSON = NOX_sas_call.get_job_results(pathndb)
-        
 
 
     # Function to generate the json file for the NOX software
@@ -247,19 +241,14 @@ class RunPredict:
                 }
             JSONCORE["markers"].append(markers)
         JSONHeaders["scorings"].append(JSONCORE)
-        
-        if len(self.NOXSASJSON)>0:
-            for i in range(len(self.NOXSASJSON["scorings"])):
-                JSONHeaders["scorings"].append(self.NOXSASJSON["scorings"][i])
-        with open(filepath, 'w') as outfile:
-            json.dump(JSONHeaders, outfile, indent=4)
+
+        # with open(filepath, 'w') as outfile:
+        #     json.dump(JSONHeaders, outfile, indent=4)
 
     def launch(self):
         print("-------------------------------------------------------- BEGIN PREDICTION -----------------------------------------------------------------")
-        filezip = [f for f in os.listdir(self.paramsPred["EDFPath"]) if f.endswith(".zip")]
-        self.NOXSAS(os.path.join(self.paramsPred["EDFPath"],filezip[0]))
         for file in range(1,self.nfile+1):
-            self.Predict(file)
-        
+            JSONfile = self.Predict(file)
+        return JSONfile
         print("------------------------------------------------------------ END PREDICTION -------------------------------------------------------------")
 
