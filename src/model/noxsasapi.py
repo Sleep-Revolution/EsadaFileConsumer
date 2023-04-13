@@ -4,10 +4,12 @@ import requests
 import json
 from io import BytesIO
 import time
+import os
+
 
 class NOXSASAPI:
     def __init__(self):
-        self.url = "http://130.208.209.71/jobs"
+        # self.url = #"http://130.208.209.71/jobs"
         self.class_map = {
             "sleep-n3": 0,
             "sleep-n2": 1,
@@ -41,12 +43,11 @@ class NOXSASAPI:
         with ZipFile(path_to_recording) as zf:
             with ZipFile(zip_buffer, "w") as zip_file:
                 for file in zf.namelist():
-                    if file.endswith(".ndf"):
-                        if Path(file).name.lower() in self.REQUIRED_SIG_FILENAMES:
-                            file_contents = zf.read(file)
+                    if Path(file).name.lower() in self.REQUIRED_SIG_FILENAMES:
+                        file_contents = zf.read(file)
 
-                            # Add the file contents to the new zip file
-                            zip_file.writestr(file, file_contents)
+                        # Add the file contents to the new zip file
+                        zip_file.writestr(file, file_contents)
 
 
         data = {"model_version": "v1.1-cal"}
@@ -54,7 +55,7 @@ class NOXSASAPI:
         # If you are sending a real file, you can do something akin to this:
         # files = {"file": open(path_to_my_zip_file, "rb")}
         files = {"file": zip_buffer.getbuffer()}
-        r = requests.post(self.url, params=data, headers=headers, files=files, timeout=1000)
+        r = requests.post(os.environ["NOX_SAS_SERVICE"], params=data, headers=headers, files=files, timeout=1000)
         r = r.json()
 
         
@@ -62,7 +63,7 @@ class NOXSASAPI:
 
 
     def get_job_status(self,job_id: str) -> dict:
-        new_url = f"{self.url}/{job_id}"
+        new_url = f'{os.environ["NOX_SAS_SERVICE"]}/{job_id}'
 
         headers = {"accept": "application/json"}
 
@@ -71,8 +72,8 @@ class NOXSASAPI:
     
         return r
 
-    def get_job_results(self, path_to_unzipped_nox_recording) -> dict:
-        response = self.send_prediction_job(Path(path_to_unzipped_nox_recording))
+    def get_job_results(self, path_to_zipped_nox_recording) -> dict:
+        response = self.send_prediction_job(Path(path_to_zipped_nox_recording))
         job_id = response["job_id"]
         iter_ = 0
         while response["status"] != "SUCCESS":

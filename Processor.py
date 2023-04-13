@@ -2,7 +2,7 @@ import pika
 import os
 import json
 import time
-
+from src.ProcessorFunctions import NoxToEdf, JSONMerge, JsonToNdb, RunMatiasAlgorithm, RunNOXSAS
 
 creds = pika.PlainCredentials('guest', 'guest')
 # connection_params = pika.ConnectionParameters(os.environ['RABBITMQ_SERVER'], 5672, '/', self.creds)
@@ -32,6 +32,12 @@ class ProgressMessage:
 def process_file(message):
 
 
+
+
+
+
+
+    
     name = message['name']
     routing_key = f'file_progress.{name}'
     print('------->', routing_key)
@@ -45,7 +51,7 @@ def process_file(message):
         )
     # Convert to EDF
     # time.sleep(30)
-    channel.basic_consume(queue='task_queue', on_message_callback=step_1_ndb_to_edf)
+    # channel.basic_consume(queue='task_queue', on_message_callback=step_1_ndb_to_edf)
 
     channel.basic_publish(
             exchange='file_progress',
@@ -80,6 +86,11 @@ def process_file(message):
 
     print("done processing file", name)
 
+    Success, Message, edfName = NoxToEdf(file, projectLocation)
+    Success, Message, JSONN = RunNOXSAS(file)
+    Success, Message, JSONM = RunMatiasAlgorithm(os.path.join(projectLocation, edfName))
+    Success, Message, JSONM = JSONMerge(JSONM,JSONN)
+    JsonToNdb(JSONM)
 
 
 def on_message(channel, method, properties, body):

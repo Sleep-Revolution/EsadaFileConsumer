@@ -46,9 +46,9 @@ class RunPredict:
             'N3': 3.,
             'REM': 4.}
         
-
+        # ToDo: Put this into the environmental variables.
+        ModelPath = os.environ["MATIAS_MODEL_PATH"]#"matiasmodel/sas_scoring_models/E1M2_iqr_std_2021-11-04_135554/"  
       
-        ModelPath = "matiasmodel/sas_scoring_models/E1M2_iqr_std_2021-11-04_135554/"  
         confyml = "src/run/PreProConf.yaml"
         logging.basicConfig(level=logging.INFO)
         loader = get_conf_loader()
@@ -125,28 +125,6 @@ class RunPredict:
 
         Hp_pred = np.argmax(Y,axis=1)
 
-
-        ####################### UNCOMMENT ONLY FOR VALIDATION ################################
-#         y_valid = self.MathiasValidation(i)
-
-#         gaborder = np.array(self.generator.currentSignal.metadata["SignalName"])
-#         matorder = np.array(['AF3-E3E4','AF4-E3E4','AF7-E3E4','AF8-E3E4','E3-AFZ','E2-AFZ','E1-E4','E2-E3'])
-
-#         all_ind = []
-#         for h in range(self.nsignals):
-#             k = np.where(gaborder[h]==matorder)[0][0]
-#             Y_tmp = np.array(y[h])
-#             Y_tmp = normalize(Y_tmp,norm="l1")
-#             Hp_predtmp = np.argmax(Y_tmp,axis=1)
-#             hg_final = np.argmax(y_valid[k,:,:], axis=1)
-#             ind = np.where(Hp_predtmp != hg_final)[0]
-#             all_ind.append(ind)
-#             print(gaborder[h],matorder[k],ind.shape)
-#         y_sum = np.sum(y_valid, axis = 0)
-#         hg_final = np.argmax(np.sum(y_valid, axis = 0), axis=1)
-#         ind = np.where(Hp_pred != hg_final)[0]
-#         print("Validation, Number of divergence=",len(ind))
-        ############################################################################################
         
         SignalName = np.array(self.generator.currentSignal.metadata["SignalName"])
         filepath = os.path.join(self.paramsPred["PredPath"],self.generator.Predictors_.allEdf[i-1]+".csv")
@@ -193,17 +171,8 @@ class RunPredict:
                 Y_tmp = pd.DataFrame(Y_tmp,columns = columns)
                 DF = pd.concat((DF,Y_tmp),axis = 1)
             DF["Measure_date"] = self.generator.currentSignal.metadata["Measure date"]
-            self.NOXJSON(DF,filepathJSON)
-            # DF.to_csv(filepath)
-        else:
-            columns = ["Times",SignalName[0]+"_Hypno"]+[SignalName[0]+"_"+k for k in list(self.SCORE_DICT.keys())]+["GrayArea"]+["Warning_"+k for k in list(warnings.keys())]
-            DF = pd.DataFrame(results,columns = columns)
-            DF["Measure_date"] = self.generator.currentSignal.metadata["Measure date"]
-            self.NOXJSON(DF,filepathJSON)
-            
-            # DF.to_csv(filepath)
-    
-
+        return self.NOXJSON(DF,filepathJSON)
+     
 
     # Function to generate the json file for the NOX software
     def NOXJSON(self,predcsv,filepath):
@@ -241,7 +210,7 @@ class RunPredict:
                 }
             JSONCORE["markers"].append(markers)
         JSONHeaders["scorings"].append(JSONCORE)
-
+        return JSONHeaders
         # with open(filepath, 'w') as outfile:
         #     json.dump(JSONHeaders, outfile, indent=4)
 

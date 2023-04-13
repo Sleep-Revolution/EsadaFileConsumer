@@ -3,11 +3,11 @@ import requests
 import shutil
 import zipfile
 import datetime
-from src.run import run as Run
+# from src.run import run as Run
 from src.model import noxsasapi as nsa
 import uuid
 import pathlib
-
+import json
 channels = []
 noxUrlToEdf = '130.208.209.67'
 noxUrlScoring = '130.208.209.68'
@@ -74,13 +74,13 @@ def RunMatiasAlgorithm(edfLocation):
         return False, f"Failed to run Matias algorithm for recording {edfLocation}", e
     return True, "Success", y
 
-def RunNOXSAS(projectLocation):
+def RunNOXSAS(zfile):
     try:
-        filezip = [f for f in os.listdir(projectLocation) if f.endswith(".zip")]
+        # filezip = file#[f for f in os.listdir(projectLocation) if f.endswith(".zip")]
         NOX_sas_call = nsa.NOXSASAPI()
-        NOXSASJSON = NOX_sas_call.get_job_results(os.path.join(projectLocation, filezip[0]))
+        NOXSASJSON = NOX_sas_call.get_job_results(zfile)
     except Exception as e:
-        return False, f"Failed to run NOX SAS for recording {os.path.join(projectLocation, filezip[0])}", e
+        return False, f"Failed to run NOX SAS for recording {zfile}", e
     
     return True, "Success", NOXSASJSON
 
@@ -138,21 +138,37 @@ def RunSasService(RecordingLocation):
         return False, "Failed to Write to SAS ZIP location!", None
 
 
-
+def JsonToNdb(json):
+    try:
+        now = datetime.datetime.now()
+        print("\t -> Posting Nox zip to service")
+        r = requests.post(f'http://130.208.209.68/json-to-ndb', json=json, stream=True)
+        print("\t <- Done posting Nox zip to service")
+        print(f"\t <-- It took {datetime.datetime.now() - now} seconds....")
+    except Exception as e:
+        return False, f"Requests error for {dir}", e
+    if r.status_code > 299:
+        return False, f"Status {r.status_code} for recording {dir}", None
+    # Write the response to a file.
+    try:
+        with open(os.path.join("Data.ndb"), 'wb') as f:
+            shutil.copyfileobj(r.raw, f)
+    except:
+        return False, f"Failed to save the ndb for recording {dir}", None
 
     
 os.makedirs(projectLocation, exist_ok=True)
 
 
-Success, Message, edfName = NoxToEdf(file, projectLocation)
-Success, Message, JSONN = RunNOXSAS(projectLocation)
-Success, Message, JSONM = RunMatiasAlgorithm(os.path.join(projectLocation, edfName))
-Success, Message, JSONM = JSONMerge(JSONM,JSONN)
-print(Message)
+# Success, Message, edfName = NoxToEdf(file, projectLocation)
+# Success, Message, JSONN = RunNOXSAS(file)
+# Success, Message, JSONM = RunMatiasAlgorithm(os.path.join(projectLocation, edfName))
+# Success, Message, JSONM = JSONMerge(JSONM,JSONN)
+x = None
+with open("tempjson.json", 'r') as f:
+    x = json.loads(f.read())
 
-
-RunSasService(file)
-
+JsonToNdb(x)
 
 
 
