@@ -2,12 +2,14 @@ import pika
 import os
 import json
 import time
+import zipfile
 from src.ProcessorFunctions import NoxToEdf, JSONMerge, JsonToNdb, RunMatiasAlgorithm, RunNOXSAS
+import shutil 
+creds = pika.PlainCredentials('server', 'server')
 
-creds = pika.PlainCredentials('guest', 'guest')
-# connection_params = pika.ConnectionParameters(os.environ['RABBITMQ_SERVER'], 5672, '/', self.creds)
-connection = pika.BlockingConnection(pika.ConnectionParameters(os.environ['RABBITMQ_SERVER'], 15672, '/', creds))
-# connection = pika.BlockingConnection(pika.ConnectionParameters("localhost"))
+# connection_params = pika.ConnectionParameters(os.environ['RABBITMQ_SERVER'], 5672, '/', creds)
+connection = pika.BlockingConnection(pika.ConnectionParameters(os.environ['RABBITMQ_SERVER'], 5672, '/', creds, heartbeat=60*10))
+# connection = pika.BlockingConnection(connection_params)
 
 # connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
 channel = connection.channel()
@@ -16,81 +18,135 @@ queue_name = 'file_progress_queue'
 channel.queue_declare(queue=queue_name)
 
 class ProgressMessage:
-    def __init__(self, stepNumber:int, taskTitle:str, progress:int):
+    def __init__(self, stepNumber:int, taskTitle:str, progress:int, message:str=""):
         self.StepNumber = stepNumber
         self.TaskTitle = taskTitle
         self.Progress = progress
+        self.Message = message
     def serialise(self) -> str:
         return json.dumps({
             'stepNumber': self.StepNumber,
             'taskTitle': self.TaskTitle,
-            'progrees': self.Progress
+            'progrees': self.Progress,
+            'message': self.Message
         })
 
-
+def basicpublish(channel, name, taskNumber, task, status, message=""):
+    channel.basic_publish(
+            exchange='progress_topic',
+            routing_key=f'file_progress.{name}',
+            body=ProgressMessage(taskNumber, task, status, message).serialise()
+        )
+    
 
 def process_file(message):
 
 
 
 
+    # Centre --:> uploads == [ id int, location, etc. ]
 
 
-
-    
-    name = message['name']
+    path = message['path'] #centre name
+    name = message['name'] # hashids(id of upload)
     routing_key = f'file_progress.{name}'
+    # BUCKET/CENTRE/NAME/
+    projectLocation = os.path.join(os.environ['PORTAL_DESTINATION_FOLDER'], path, name)
+
     print('------->', routing_key)
     # Download the file from the location specified in the message
-    channel.queue_bind(queue=queue_name, exchange='file_progress', routing_key=routing_key)
+    channel.queue_bind(queue=queue_name, exchange='progress_topic', routing_key=routing_key)
 
-    channel.basic_publish(
-            exchange='file_progress',
-            routing_key=f"file_progress.{name}",
-            body=ProgressMessage(1, 'Convert to EDF', 0).serialise()
-        )
-    # Convert to EDF
-    # time.sleep(30)
-    # channel.basic_consume(queue='task_queue', on_message_callback=step_1_ndb_to_edf)
+    step = 1 
+    task = 'Convert To EDF'
+    basicpublish(channel, name, step, task, 0)
+    receivedZipFiles = list(filter(lambda x: '.zip' in x, os.listdir(os.path.join(os.environ['PORTAL_DESTINATION_FOLDER'], path, name))))
+    if len(receivedZipFiles) != 1:
+        pass 
+    receivedZipFile = receivedZipFiles[0]
 
-    channel.basic_publish(
-            exchange='file_progress',
-            routing_key=f'file_progress.{name}',
-            body=ProgressMessage(1, 'Convert to EDF', 1).serialise()
-        )
+    originalZipLocation = os.path.join(projectLocation, receivedZipFile)
 
-    channel.basic_publish(
-            exchange='file_progress',
-            routing_key=f'file_progress.{name}',
-            body=ProgressMessage(2, 'Run Inference', 0).serialise()
-        )
-    # Run Inference
-    time.sleep(30)
-    channel.basic_publish(
-            exchange='file_progress',
-            routing_key=f'file_progress.{name}',
-            body=ProgressMessage(2, 'Run Inference', 1).serialise()
-        )
-    channel.basic_publish(
-            exchange='file_progress',
-            routing_key=f'file_progress.{name}',
-            body=ProgressMessage(3, 'Combine Scoring', 0).serialise()
-        )
-    time.sleep(30)
-    # Combine Scoring
-    channel.basic_publish(
-            exchange='file_progress',
-            routing_key=f'file_progress.{name}',
-            body=ProgressMessage(3, 'Combine Scoring', 1).serialise()
-        )
+    Success, Message, edfName = NoxToEdf(originalZipLocation, projectLocation)
+    basicpublish(channel, name, step, task, 1)
+  
+    
 
+    step = 2
+    task = 'Run Matias Algorithm'
+    basicpublish(channel, name, step, task, 0)
+    Success, Message, JSONMatias = RunMatiasAlgorithm(os.path.join(projectLocation, edfName))
+    basicpublish(channel, name, step, task, 1)
+
+
+    step = 3
+    task = 'Run NOX SAS Service'
+    basicpublish(channel, name, step, task, 0)
+    Success, Message, JSONNox = RunNOXSAS(os.path.join(projectLocation, receivedZipFile))
+    basicpublish(channel, name, step, task, 1)
+    
+    step = 4
+    task = 'Combine JSON'
+    basicpublish(channel, name, step, task, 0)
+    Success, Message, JSONM = JSONMerge(JSONMatias,JSONNox)
+    basicpublish(channel, name, step, task, 1)
+
+    step = 5
+    task = 'Get NDB'
+    basicpublish(channel, name, step, task, 0)
+    JsonToNdb(JSONM, projectLocation)
+    basicpublish(channel, name, step, task, 1)
+
+    step = 6
+    task = 'Extract Original Zip file to temporary destination'
+    basicpublish(channel, name, step, task, 0)
+    unzipLocation = os.path.join(projectLocation, 'unzipped_original_recording')
+    try:
+    # Extract the zip file to the destination folder.
+        print("\t -> Extracting Zipped NOX folder")
+
+        with zipfile.ZipFile(originalZipLocation, 'r') as f:
+            f.extractall(unzipLocation)
+            f.close()
+        print("\t <- Done extracting Zipped NOX folder into temporary destination", unzipLocation)
+        if len(os.listdir(unzipLocation)) != 1:
+            basicpublish(channel, name, step, task, 3, 'Bad number of folders inside extracted nox recording!')
+            return
+    except:
+        basicpublish(channel, name, step, task, 3,  f'Failed to extract the ZIP recording in {originalZipLocation} to {unzipLocation}!')
+        return
+    basicpublish(channel, name, step, task, 1)
+
+    # move all files inside the new folder in "unzipped_original_recording"
+    newFolder = os.listdir(unzipLocation)[0]
+    centreDestinationFolder = os.path.join(os.environ['DELIVERY_FOLDER'], path)
+    os.mkdir(centreDestinationFolder)
+    processedRecordingFolder = os.path.join(centreDestinationFolder, newFolder)
+    os.mkdir(processedRecordingFolder)
+    receivedRecordingLocation = os.path.join(unzipLocation, newFolder)
+    files = os.listdir(receivedRecordingLocation)
+
+    shutil.copy(
+        os.path.join(projectLocation, 'Data.ndb'),
+        processedRecordingFolder
+    )
+
+    for file in files:
+        if '.ndb' in file.lower():
+            continue
+        shutil.copy(
+            os.path.join(receivedRecordingLocation, file),
+            processedRecordingFolder
+        )
     print("done processing file", name)
 
-    Success, Message, edfName = NoxToEdf(file, projectLocation)
-    Success, Message, JSONN = RunNOXSAS(file)
-    Success, Message, JSONM = RunMatiasAlgorithm(os.path.join(projectLocation, edfName))
-    Success, Message, JSONM = JSONMerge(JSONM,JSONN)
-    JsonToNdb(JSONM)
+
+
+
+    # Success, Message, JSONN = RunNOXSAS(file)
+    # Success, Message, JSONM = RunMatiasAlgorithm(os.path.join(projectLocation, edfName))
+    # Success, Message, JSONM = JSONMerge(JSONM,JSONN)
+    # JsonToNdb(JSONM)
 
 
 def on_message(channel, method, properties, body):
@@ -100,7 +156,7 @@ def on_message(channel, method, properties, body):
     channel.basic_ack(delivery_tag=method.delivery_tag)
 
 channel.basic_qos(prefetch_count=1)
-channel.basic_consume(queue='task_queue', on_message_callback=on_message)
+channel.basic_consume(queue=os.environ['TASK_QUEUE'], on_message_callback=on_message)
 
 print("Now consuming from channel.")
 channel.start_consuming()
