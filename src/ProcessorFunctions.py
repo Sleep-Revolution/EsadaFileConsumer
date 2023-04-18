@@ -134,12 +134,12 @@ def RunSasService(projectLocation, RecordingLocation):
 def JsonToNdb(json, destination):
     try:
         now = datetime.datetime.now()
-        print("\t -> Posting Nox zip to service")
+        print("\t -> Posting JSON to NDB service")
         r = requests.post(f'{os.environ["NOX_NDB_SERVICE"]}/json-to-ndb', json=json, stream=True)
-        print("\t <- Done posting Nox zip to service")
+        print("\t <- Done posting NDB to service")
         print(f"\t <-- It took {datetime.datetime.now() - now} seconds....")
     except Exception as e:
-        return False, f"Requests error for {dir}", e
+        return False, f"NDB requests error for {dir}", e
     if r.status_code > 299:
         return False, f"Status {r.status_code} for recording {dir}", None
     # Write the response to a file.

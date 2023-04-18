@@ -2,3 +2,5 @@
 .vscode
 tmp
 tmp/*
+tmp_uuids/*
+tmp_uuids

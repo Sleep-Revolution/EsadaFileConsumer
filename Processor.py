@@ -5,6 +5,7 @@ import time
 import zipfile
 from src.ProcessorFunctions import NoxToEdf, JSONMerge, JsonToNdb, RunMatiasAlgorithm, RunNOXSAS
 import shutil 
+import uuid
 creds = pika.PlainCredentials('server', 'server')
 
 # connection_params = pika.ConnectionParameters(os.environ['RABBITMQ_SERVER'], 5672, '/', creds)
@@ -16,7 +17,7 @@ channel = connection.channel()
 channel.exchange_declare(exchange='progress_topic', exchange_type='topic')
 queue_name = 'file_progress_queue'
 channel.queue_declare(queue=queue_name)
-
+import datetime
 class ProgressMessage:
     def __init__(self, stepNumber:int, taskTitle:str, progress:int, message:str=""):
         self.StepNumber = stepNumber
@@ -41,17 +42,17 @@ def basicpublish(channel, name, taskNumber, task, status, message=""):
 
 def process_file(message):
 
-
-
-
     # Centre --:> uploads == [ id int, location, etc. ]
 
+    projectName = str(uuid.uuid4())
+    projectLocation = os.path.join('temp_uuids', projectName)
+    os.makedirs(projectLocation)
 
     path = message['path'] #centre name
     name = message['name'] # hashids(id of upload)
     routing_key = f'file_progress.{name}'
     # BUCKET/CENTRE/NAME/
-    projectLocation = os.path.join(os.environ['PORTAL_DESTINATION_FOLDER'], path, name)
+    receivedZipLocation = os.path.join(os.environ['PORTAL_DESTINATION_FOLDER'], path, name)
 
     print('------->', routing_key)
     # Download the file from the location specified in the message
@@ -60,12 +61,12 @@ def process_file(message):
     step = 1 
     task = 'Convert To EDF'
     basicpublish(channel, name, step, task, 0)
-    receivedZipFiles = list(filter(lambda x: '.zip' in x, os.listdir(os.path.join(os.environ['PORTAL_DESTINATION_FOLDER'], path, name))))
+    receivedZipFiles = list(filter(lambda x: '.zip' in x, os.listdir(receivedZipLocation)))
     if len(receivedZipFiles) != 1:
         pass 
     receivedZipFile = receivedZipFiles[0]
 
-    originalZipLocation = os.path.join(projectLocation, receivedZipFile)
+    originalZipLocation = os.path.join(receivedZipLocation, receivedZipFile)
 
     Success, Message, edfName = NoxToEdf(originalZipLocation, projectLocation)
     basicpublish(channel, name, step, task, 1)
@@ -82,7 +83,7 @@ def process_file(message):
     step = 3
     task = 'Run NOX SAS Service'
     basicpublish(channel, name, step, task, 0)
-    Success, Message, JSONNox = RunNOXSAS(os.path.join(projectLocation, receivedZipFile))
+    Success, Message, JSONNox = RunNOXSAS(originalZipLocation)
     basicpublish(channel, name, step, task, 1)
     
     step = 4
@@ -119,13 +120,17 @@ def process_file(message):
 
     # move all files inside the new folder in "unzipped_original_recording"
     newFolder = os.listdir(unzipLocation)[0]
+    # os.mkdir(centreDestinationFolder)
     centreDestinationFolder = os.path.join(os.environ['DELIVERY_FOLDER'], path)
-    os.mkdir(centreDestinationFolder)
-    processedRecordingFolder = os.path.join(centreDestinationFolder, newFolder)
-    os.mkdir(processedRecordingFolder)
-    receivedRecordingLocation = os.path.join(unzipLocation, newFolder)
-    files = os.listdir(receivedRecordingLocation)
+    if not os.path.exists(centreDestinationFolder):
+        os.mkdir(centreDestinationFolder)
+    processedRecordingFolder = os.path.join(centreDestinationFolder, newFolder+":(")
+    if not os.path.exists(processedRecordingFolder):
+        os.makedirs(processedRecordingFolder)
 
+    receivedRecordingLocation = os.path.join(unzipLocation, newFolder)
+
+    files = os.listdir(receivedRecordingLocation)
     shutil.copy(
         os.path.join(projectLocation, 'Data.ndb'),
         processedRecordingFolder
@@ -138,7 +143,6 @@ def process_file(message):
             os.path.join(receivedRecordingLocation, file),
             processedRecordingFolder
         )
-    print("done processing file", name)
 
 
 
@@ -152,7 +156,9 @@ def process_file(message):
 def on_message(channel, method, properties, body):
     print("Recived a message")
     message = json.loads(body)
+    time = datetime.datetime.now()
     process_file(message)
+    print(f"Done Processing ({datetime.datetime.now() - time})")
     channel.basic_ack(delivery_tag=method.delivery_tag)
 
 channel.basic_qos(prefetch_count=1)
