@@ -196,10 +196,15 @@ class RunPredict:
         "active_scoring_name": "MatiasAlgorithm",
         "scorings": []}
         ListCORE = []
-
+        
         JSONCORE = {
             "scoring_name": JSONHeaders["active_scoring_name"],
             "markers":[]}
+        
+        JSONCORE_U = {
+            "scoring_name": JSONHeaders["active_scoring_name"]+"_uncertain",
+            "markers":[]}
+        
         for i in range(nepoch):
             markers = {
                 "label": sleepstage[int(predcsv["Ens_Hypno"].iloc[i])],
@@ -209,7 +214,21 @@ class RunPredict:
                 "scoring_type": "Automatic"
                 }
             JSONCORE["markers"].append(markers)
+
+            if predcsv["GrayArea"].iloc[i]==1:
+                new_marker_unc = {
+                    "label": sleepstage[int(predcsv["Ens_Hypno"].iloc[i])]+"_uncertain",
+                    "signal": None,
+                    "start_time": starttime2YYYYMMDDHHMMSS[i],
+                    "stop_time": stoptime2YYYYMMDDHHMMSS[i],
+                    "scoring_type": "Automatic",
+                }
+                JSONCORE_U["markers"].append(new_marker_unc)
+            else:
+                JSONCORE_U["markers"].append(markers)
+
         JSONHeaders["scorings"].append(JSONCORE)
+        JSONHeaders["scorings"].append(JSONCORE_U)
         return JSONHeaders
         # with open(filepath, 'w') as outfile:
         #     json.dump(JSONHeaders, outfile, indent=4)

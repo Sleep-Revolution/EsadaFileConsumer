@@ -5,7 +5,7 @@ import json
 from io import BytesIO
 import time
 import os
-
+import numpy as np
 
 class NOXSASAPI:
     def __init__(self):
@@ -88,13 +88,8 @@ class NOXSASAPI:
         print(response["status"])
         markers = response["results"]["markers"]
 
-        sleepstages_predicted = []
-
-        for epoch in markers:
-            epoch_sleepstage = epoch["prediction"]
-            sleepstages_predicted.append(self.class_map[epoch_sleepstage])
-
         markers_for_service = []
+        markers_for_greyarea = []
         for marker in markers:
             new_marker = {
                 "label": marker["prediction"],
@@ -105,16 +100,39 @@ class NOXSASAPI:
             }
             markers_for_service.append(new_marker)
 
-        scoring_name = "NOXSAS"
+            probs = np.array([marker["sleep-wake"],
+                              marker["sleep-rem"],
+                              marker["sleep-n1"],
+                              marker["sleep-n2"],
+                              marker["sleep-n3"]])
+            u2 = ((probs)*(1-probs)).sum()
+            if u2 > float(os.environ["GRAYAREA_TRESHOLD"]):
+                new_marker_unc = {
+                    "label": marker["prediction"]+"_uncertain",
+                    "signal": None,
+                    "start_time": marker["start_time"],
+                    "stop_time": marker["stop_time"],
+                    "scoring_type": "Automatic",
+                }
+                markers_for_greyarea.append(new_marker_unc)
+            else:
+                markers_for_greyarea.append(new_marker)
 
         scoring_collection_object = {
             "version": "1.0",
-            "active_scoring_name": scoring_name,
+            "active_scoring_name": "NOXSAS",
             "scorings": [
                 {
-                "scoring_name": scoring_name,
+                "scoring_name": "NOXSAS",
                 "markers": markers_for_service
                 }
             ]
             }
+        
+        scoring_collection_object["scorings"].append({
+            "scoring_name": "NOXSAS_uncertain",
+            "markers": markers_for_greyarea
+            })
+
+
         return scoring_collection_object
