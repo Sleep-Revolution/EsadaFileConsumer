@@ -4,3 +4,5 @@ tmp
 tmp/*
 tmp_uuids/*
 tmp_uuids
+tmp_uuids/*
+*/__pycache__/*
