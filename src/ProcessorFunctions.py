@@ -148,3 +148,4 @@ def JsonToNdb(json, destination):
             shutil.copyfileobj(r.raw, f)
     except:
         return False, f"Failed to save the ndb for recording {dir}", None
+    return True, "NDB successful", os.path.join(destination, "Data.ndb")

@@ -62,13 +62,17 @@ def process_file(message):
     task = 'Convert To EDF'
     basicpublish(channel, name, step, task, 0)
     receivedZipFiles = list(filter(lambda x: '.zip' in x, os.listdir(receivedZipLocation)))
-    if len(receivedZipFiles) != 1:
-        pass 
+    if len(receivedZipFiles) != 1
+        basicpublish(channel, name, step, task, 2, "Number of received files from the Nox EDF service was not equal to 1")
+        raise Exception(f"Failed task {step}, \"{task}\"")
     receivedZipFile = receivedZipFiles[0]
 
     originalZipLocation = os.path.join(receivedZipLocation, receivedZipFile)
 
     Success, Message, edfName = NoxToEdf(originalZipLocation, projectLocation)
+    if not Success:
+        basicpublish(channel, name, step, task, 2, Message)
+        raise Exception(f"Failed task {step}, \"{task}\"")
     basicpublish(channel, name, step, task, 1)
   
     
@@ -77,6 +81,9 @@ def process_file(message):
     task = 'Run Matias Algorithm'
     basicpublish(channel, name, step, task, 0)
     Success, Message, JSONMatias = RunMatiasAlgorithm(os.path.join(projectLocation, edfName))
+    if not Success:
+        basicpublish(channel, name, step, task, 2, Message)
+        raise Exception(f"Failed task {step}, \"{task}\"")
     basicpublish(channel, name, step, task, 1)
 
 
@@ -84,18 +91,28 @@ def process_file(message):
     task = 'Run NOX SAS Service'
     basicpublish(channel, name, step, task, 0)
     Success, Message, JSONNox = RunNOXSAS(originalZipLocation)
+    if not Success:
+        basicpublish(channel, name, step, task, 2, Message)
+        raise Exception(f"Failed task {step}, \"{task}\"")
     basicpublish(channel, name, step, task, 1)
     
+
     step = 4
     task = 'Combine JSON'
     basicpublish(channel, name, step, task, 0)
     Success, Message, JSONM = JSONMerge(JSONMatias,JSONNox)
+    if not Success:
+        basicpublish(channel, name, step, task, 2, Message)
+        raise Exception(f"Failed task {step}, \"{task}\"")
     basicpublish(channel, name, step, task, 1)
 
     step = 5
     task = 'Get NDB'
     basicpublish(channel, name, step, task, 0)
-    JsonToNdb(JSONM, projectLocation)
+    Success, Message, ndbDestination = JsonToNdb(JSONM, projectLocation)
+    if not Success:
+        basicpublish(channel, name, step, task, 2, Message)
+        raise Exception(f"Failed task {step}, \"{task}\"")
     basicpublish(channel, name, step, task, 1)
 
     step = 6
@@ -111,11 +128,12 @@ def process_file(message):
             f.close()
         print("\t <- Done extracting Zipped NOX folder into temporary destination", unzipLocation)
         if len(os.listdir(unzipLocation)) != 1:
-            basicpublish(channel, name, step, task, 3, 'Bad number of folders inside extracted nox recording!')
-            return
+            basicpublish(channel, name, step, task, 2, 'Bad number of folders inside extracted nox recording!')
+            raise Exception(f"Failed task {step}, \"{task}\"")
+            
     except:
-        basicpublish(channel, name, step, task, 3,  f'Failed to extract the ZIP recording in {originalZipLocation} to {unzipLocation}!')
-        return
+        basicpublish(channel, name, step, task, 2,  f'Failed to extract the ZIP recording in {originalZipLocation} to {unzipLocation}!')
+        raise Exception(f"Failed task {step}, \"{task}\"")
     basicpublish(channel, name, step, task, 1)
 
     # move all files inside the new folder in "unzipped_original_recording"
@@ -130,12 +148,9 @@ def process_file(message):
 
     receivedRecordingLocation = os.path.join(unzipLocation, newFolder)
 
-    files = os.listdir(receivedRecordingLocation)
-    shutil.copy(
-        os.path.join(projectLocation, 'Data.ndb'),
-        processedRecordingFolder
-    )
+    shutil.copy(ndbDestination,processedRecordingFolder)
 
+    files = os.listdir(receivedRecordingLocation)
     for file in files:
         if '.ndb' in file.lower():
             continue
@@ -146,13 +161,6 @@ def process_file(message):
 
 
 
-
-    # Success, Message, JSONN = RunNOXSAS(file)
-    # Success, Message, JSONM = RunMatiasAlgorithm(os.path.join(projectLocation, edfName))
-    # Success, Message, JSONM = JSONMerge(JSONM,JSONN)
-    # JsonToNdb(JSONM)
-
-
 def on_message(channel, method, properties, body):
     print("Recived a message")
     message = json.loads(body)
@@ -160,6 +168,7 @@ def on_message(channel, method, properties, body):
     process_file(message)
     print(f"Done Processing ({datetime.datetime.now() - time})")
     channel.basic_ack(delivery_tag=method.delivery_tag)
+    
 
 channel.basic_qos(prefetch_count=1)
 channel.basic_consume(queue=os.environ['TASK_QUEUE'], on_message_callback=on_message)
