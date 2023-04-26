@@ -106,7 +106,7 @@ class NOXSASAPI:
                               marker["sleep-n2"],
                               marker["sleep-n3"]])
             u2 = ((probs)*(1-probs)).sum()
-            if u2 > float(os.environ["GRAYAREA_TRESHOLD"]):
+            if u2 > float(os.environ["GRAYAREA_THRESHOLD"]):
                 new_marker_unc = {
                     "label": marker["prediction"]+"_uncertain",
                     "signal": None,
