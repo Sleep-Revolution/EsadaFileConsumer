@@ -60,7 +60,7 @@ class RunPredict:
                            "ALL":True,
                            "Ensemble":True,
                            "Type_study":"SAS",
-                           "GrayAreaThreshold":0.3,
+                           "GrayAreaThreshold":float(os.environ["GRAYAREA_THRESHOLD"]),
                            "EDFPath":FILEPATH,
                            "PredPath": FILEPATH[:-4] + "_PRED"
                            }
