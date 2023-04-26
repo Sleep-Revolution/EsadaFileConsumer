@@ -16,9 +16,8 @@ noxUrlToSAS = '130.208.209.71'
 
 
 # file = '/mnt/foobar/Benedikt/TestRecording/Day1_test2.zip'
-# file = '/main/home/gabrielj@sleep.ru.is/TmpData/Day1_test2.zip'
-# file = '/main/home/gabrielj@sleep.ru.is/TmpData/Day1test.zip'
 file = '/main/home/gabrielj@sleep.ru.is/TmpData/Day1AfterPreScoring.zip'
+# file = '/main/home/gabrielj@sleep.ru.is/TmpData/Day2.zip'
 tmpFolder = 'temp_uuids'
 
 onetimeuuid = uuid.uuid4()
