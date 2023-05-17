@@ -16,7 +16,7 @@ noxUrlToSAS = '130.208.209.71'
 
 
 # file = '/mnt/foobar/Benedikt/TestRecording/Day1_test2.zip'
-file = '/main/home/gabrielj@sleep.ru.is/TmpData/Day1AfterPreScoring.zip'
+file = '/home/benedikt/Downloads/benedikt_testrecording.zip'
 # file = '/main/home/gabrielj@sleep.ru.is/TmpData/Day2.zip'
 tmpFolder = 'temp_uuids'
 
@@ -166,8 +166,11 @@ os.makedirs(projectLocation, exist_ok=True)
 
 
 Success, Message, edfName = NoxToEdf(file, projectLocation)
+print("Running nox SAS")
 Success, Message, JSONN = RunNOXSAS(file)
+print("Running matias alg")
 Success, Message, JSONM = RunMatiasAlgorithm(os.path.join(projectLocation, edfName))
+print("Merging")
 Success, Message, JSONM = JSONMerge(JSONM,JSONN)
 # x = None
 # with open("tempjson.json", 'r') as f:

@@ -130,7 +130,8 @@ class Predictors:
 
         if "E3E4" in catode_tmp:
             subchannels = channel_names[ind]
-            rename_tmp = {i:i+"-E3E4" for i in subchannels[channel_category=="eeg"]}
+            f_subchnl = subchannels[channel_category=="eeg"]
+            rename_tmp = {i:i+"-E3E4" for i in f_subchnl}
             edf.set_eeg_reference(ref_channels=ref_channels[0], ch_type=ref_channels[1])
             edf.rename_channels(rename_tmp)
 
