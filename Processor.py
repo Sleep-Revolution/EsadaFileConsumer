@@ -132,6 +132,12 @@ def process_file(channel, message):
     except Exception as e:
         print("fuc,")
 
+    if len(scoringJson['active_scoring_name']) == 0:
+        scoringJson['active_scoring_name'] = "default-scoring-1"
+    for i in range(len(scoringJson['scorings'])):
+        if scoringJson['scorings'][i]['scoring_name'] == "":
+            scoringJson['scorings'][i]['scoring_name'] = f"default-scoring-{i+1}"
+
     basicpublish(channel, name, step, task, 1)
 
 
@@ -144,9 +150,12 @@ def process_file(channel, message):
     if not Success:
         basicpublish(channel, name, step, task, 2, Message)
         notes.append("Failed to run Matias algorithm")
+    else:
         # raise Exception(f"Failed task {step}, \"{task}\"")
-    Success, Message, JSONM = JSONMerge(scoringJson, JSONMatias)
-    basicpublish(channel, name, step, task, 1)
+        Success, Message, scoringJson = JSONMerge(scoringJson, JSONMatias)
+        if not Success:
+            raise Exception("asd")
+        basicpublish(channel, name, step, task, 1)
         
 
 
@@ -158,9 +167,12 @@ def process_file(channel, message):
     Success, Message, JSONNox = RunNOXSAS(originalZipLocation)
     if not Success:
         basicpublish(channel, name, step, task, 2, Message)
-        raise Exception(f"Failed task {step}, \"{task}\"")
-    Success, Message, JSONM = JSONMerge(scoringJson, JSONNox)
-    basicpublish(channel, name, step, task, 1)
+        notes.append(f"Failed task {step}, \"{task}\"")
+    else:
+        Success, Message, scoringJson = JSONMerge(scoringJson, JSONNox)
+        if not Success:
+            raise Exception("asd")
+        basicpublish(channel, name, step, task, 1)
     
 
     # step = step + 1
@@ -171,7 +183,7 @@ def process_file(channel, message):
     #     basicpublish(channel, name, step, task, 2, Message)
     #     raise Exception(f"Failed task {step}, \"{task}\"")
     # basicpublish(channel, name, step, task, 1)
-
+    j = json.dumps(scoringJson)
     step = step + 1
     task = 'Get NDB'
     basicpublish(channel, name, step, task, 0)
