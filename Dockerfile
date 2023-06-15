@@ -9,5 +9,6 @@ COPY . /app
 # Install dependencies
 RUN pip install -r requirements.txt
 
+
 # Set the entry point command to run your pipeline
 CMD ["python", "processor.py"]
