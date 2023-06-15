@@ -12,5 +12,5 @@ RUN pip install -r requirements.txt
 # Expose any necessary ports (if applicable)
 
 # Set the entry point command to run your pipeline
-CMD ["ls"]
-CMD ["python", "processor.py"]
+CMD ["ls", "/app"]
+# CMD ["python", "processor.py"]
