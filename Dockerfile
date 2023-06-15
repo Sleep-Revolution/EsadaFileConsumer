@@ -6,6 +6,10 @@ WORKDIR /app
 # Copy the pipeline files to the container
 COPY . /app
 
+RUN pwd
+
+RUN ls
+
 # Install dependencies
 RUN pip install -r requirements.txt
 
