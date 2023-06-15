@@ -1,14 +1,11 @@
 FROM python:3.9
 
 # Set the working directory inside the container
-WORKDIR /app
+WORKDIR .
 
 # Copy the pipeline files to the container
-COPY . /app
+COPY . .
 
-RUN pwd
-
-RUN ls
 
 # Install dependencies
 RUN pip install -r requirements.txt
