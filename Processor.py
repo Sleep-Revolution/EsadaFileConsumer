@@ -1,3 +1,5 @@
+
+import multiprocessing
 import pika
 import os
 import json
@@ -281,7 +283,6 @@ def consume_queue2():
 
 if __name__ == '__main__':
     print("Starting consumer threads")
-    import multiprocessing
     # p1 = multiprocessing.Process(target=consume_queue1)
     # p1.start()
     
