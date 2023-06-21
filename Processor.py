@@ -2,6 +2,8 @@
 import multiprocessing
 import pika
 import os
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 import json
 import time
 import zipfile
