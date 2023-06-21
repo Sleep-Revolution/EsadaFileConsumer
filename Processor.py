@@ -285,9 +285,9 @@ if __name__ == '__main__':
     print("Starting consumer threads")
     # p1 = multiprocessing.Process(target=consume_queue1)
     # p1.start()
-    
-    p2 = multiprocessing.Process(target=consume_queue2)
-    p2.start()
+    consume_queue2()
+    # p2 = multiprocessing.Process(target=consume_queue2)
+    # p2.start()
 
-    # p1.join()
-    p2.join()
+    # # p1.join()
+    # p2.join()
