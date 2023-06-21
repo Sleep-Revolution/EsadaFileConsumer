@@ -25,7 +25,7 @@ class ProgressMessage:
         self.TaskTitle = taskTitle
         self.Progress = progress
         self.Message = message
-    def serialise(self) -> str:
+    def serialise(self) -> str: 
         return json.dumps({
             'stepNumber': self.StepNumber,
             'taskTitle': self.TaskTitle,
@@ -39,7 +39,9 @@ def basicpublish(channel, name, taskNumber, task, status, message=""):
             routing_key=f'file_progress.{name}',
             body=ProgressMessage(taskNumber, task, status, message).serialise()
         )
-    
+
+
+
 
 def process_file(channel, message):
     
@@ -50,69 +52,76 @@ def process_file(channel, message):
     os.makedirs(projectLocation)
 
     path = message['path'] #centre name
-    name = message['name'] # hashids(id of upload)
+    name = message['name'] # ESR 0xyy0z
     routing_key = f'file_progress.{name}'
     # BUCKET/CENTRE/NAME/
-    receivedZipLocation = os.path.join(os.environ['PORTAL_DESTINATION_FOLDER'], path, name)
+    receivedLocation = os.path.join(os.environ['INDIVIDUAL_NIGHT_WAITING_ROOM'], path, name)
 
     print('------->', routing_key)
     # Download the file from the location specified in the message
-    exchange_name = 'dev_processor_progress_topic'
+    exchange_name = os.environ['PROGRESS_EXCHANGE_NAME']
     exchange_type = 'topic'
     channel.exchange_declare(exchange=exchange_name, exchange_type=exchange_type)
     channel.queue_bind(queue=queue_name, exchange=exchange_name, routing_key=routing_key)
 
     notes = []
 
+
+
     step = 1 
     task = 'Convert To EDF'
     basicpublish(channel, name, step, task, 0)
-    receivedZipFiles = list(filter(lambda x: '.zip' in x, os.listdir(receivedZipLocation)))
-    if len(receivedZipFiles) != 1:
-        basicpublish(channel, name, step, task, 2, "Number of received files from the Nox EDF service was not equal to 1") 
-        raise Exception(f"Failed task {step}, \"{task}\"")
-    receivedZipFile = receivedZipFiles[0]
-    originalZipLocation = os.path.join(receivedZipLocation, receivedZipFile)
-    Success, Message, edfName = NoxToEdf(originalZipLocation, projectLocation)
+    # receivedZipFiles = list(filter(lambda x: '.zip' in x, os.listdir(receivedLocation)))
+    # if len(receivedZipFiles) != 1:
+    #     basicpublish(channel, name, step, task, 2, "Number of received files from the Nox EDF service was not equal to 1") 
+    #     raise Exception(f"Failed task {step}, \"{task}\"")
+    # receivedZipFile = receivedZipFiles[0]
+    # originalZipLocation = os.path.join(receivedLocation, receivedZipFile)
+
+    
+    Success, Message, edfName = NoxToEdf(receivedLocation, projectLocation)
+    
+
+
     if not Success:
         basicpublish(channel, name, step, task, 2, Message)
         raise Exception(f"Failed task {step}, \"{task}\"")
     basicpublish(channel, name, step, task, 1)
 
 
-    step = step + 1
-    task = 'Extract Original Zip file to temporary destination'
-    basicpublish(channel, name, step, task, 0)
-    unzipLocation = os.path.join(projectLocation, 'unzipped_original_recording')
-    try:
-    # Extract the zip file to the destination folder.
-        print("\t -> Extracting Zipped NOX folder")
+    # step = step + 1
+    # task = 'Extract Original Zip file to temporary destination'
+    # basicpublish(channel, name, step, task, 0)
+    # unzipLocation = os.path.join(projectLocation, 'unzipped_original_recording')
+    # try:
+    # # Extract the zip file to the destination folder.
+    #     print("\t -> Extracting Zipped NOX folder")
 
-        with zipfile.ZipFile(originalZipLocation, 'r') as f:
-            f.extractall(unzipLocation)
-            f.close()
-        print("\t <- Done extracting Zipped NOX folder into temporary destination", unzipLocation)
-        if len(os.listdir(unzipLocation)) != 1:
-            basicpublish(channel, name, step, task, 2, 'Bad number of folders inside extracted nox recording!')
-            raise Exception(f"Failed task {step}, \"{task}\"")
+    #     with zipfile.ZipFile(originalZipLocation, 'r') as f:
+    #         f.extractall(unzipLocation)
+    #         f.close()
+    #     print("\t <- Done extracting Zipped NOX folder into temporary destination", unzipLocation)
+    #     if len(os.listdir(unzipLocation)) != 1:
+    #         basicpublish(channel, name, step, task, 2, 'Bad number of folders inside extracted nox recording!')
+    #         raise Exception(f"Failed task {step}, \"{task}\"")
             
-    except:
-        basicpublish(channel, name, step, task, 2,  f'Failed to extract the ZIP recording in {originalZipLocation} to {unzipLocation}!')
-        raise Exception(f"Failed task {step}, \"{task}\"")
+    # except:
+    #     basicpublish(channel, name, step, task, 2,  f'Failed to extract the ZIP recording in {originalZipLocation} to {unzipLocation}!')
+    #     raise Exception(f"Failed task {step}, \"{task}\"")
 
-    newFolder = os.listdir(unzipLocation)[0]
-    receivedRecordingLocation = os.path.join(unzipLocation, newFolder)
-    basicpublish(channel, name, step, task, 1)
+    # newFolder = os.listdir(unzipLocation)[0]
+    # receivedRecordingLocation = os.path.join(unzipLocation, newFolder)
+    # basicpublish(channel, name, step, task, 1)
 
 
     step = step + 1
     task = "Get json from original ndb file"
-    files = os.listdir(receivedRecordingLocation)
+    files = os.listdir(receivedLocation)
     oldNdbFiles = list(filter(lambda x: '.ndb' in x.lower(), files))
     if len(oldNdbFiles) != 1:
         basicpublish(channel, name, step, task, 2, f"Found {len(oldNdbFiles)} ndb files in extracted location.")
         raise Exception("Found too many ndb recordings.")
-    oldNdbFileLocation = os.path.join(receivedRecordingLocation, oldNdbFiles[0])
+    oldNdbFileLocation = os.path.join(receivedLocation, oldNdbFiles[0])
     files = {'ndb_file': open(oldNdbFileLocation, 'rb').read()}
     headers = {
         # 'accept': 'application/json',
@@ -164,7 +173,7 @@ def process_file(channel, message):
     step = step + 1
     task = 'Run NOX SAS Service'
     basicpublish(channel, name, step, task, 0)
-    Success, Message, JSONNox = RunNOXSAS(originalZipLocation)
+    Success, Message, JSONNox = RunNOXSAS(receivedLocation)
     if not Success:
         basicpublish(channel, name, step, task, 2, Message)
         notes.append(f"Failed task {step}, \"{task}\"")
@@ -202,18 +211,18 @@ def process_file(channel, message):
     centreDestinationFolder = os.path.join(os.environ['DELIVERY_FOLDER'], path)
     if not os.path.exists(centreDestinationFolder):
         os.mkdir(centreDestinationFolder)
-    processedRecordingFolder = os.path.join(centreDestinationFolder, newFolder+":(")
+    processedRecordingFolder = os.path.join(centreDestinationFolder, name+":(")
     if not os.path.exists(processedRecordingFolder):
         os.makedirs(processedRecordingFolder)
 
     shutil.copy(ndbDestination,processedRecordingFolder)
 
-    files = os.listdir(receivedRecordingLocation)
+    files = os.listdir(receivedLocation)
     for file in files:
         if '.ndb' in file.lower():
             continue
         shutil.copy(
-            os.path.join(receivedRecordingLocation, file),
+            os.path.join(receivedLocation, file),
             processedRecordingFolder
         )
 
@@ -247,7 +256,7 @@ def consume_queue2():
     connection = pika.BlockingConnection(pika.ConnectionParameters(os.environ['RABBITMQ_SERVER'], 5672, '/', creds, heartbeat=60*10))
     channel = connection.channel()
     channel.queue_declare(queue=os.environ['TASK_QUEUE'], durable=True)
-    
+    print("Consuming from", os.environ['TASK_QUEUE'])
     def callback(ch, method, properties, body):
         # Process the message from queue2
         message = json.loads(body)
