@@ -253,6 +253,7 @@ def consume_queue1():
 
 # Define a function to consume from the second queue
 def consume_queue2():
+    print("Q2 engaged")
     connection = pika.BlockingConnection(pika.ConnectionParameters(os.environ['RABBITMQ_SERVER'], 5672, '/', creds, heartbeat=60*10))
     channel = connection.channel()
     channel.queue_declare(queue=os.environ['TASK_QUEUE'], durable=True)
