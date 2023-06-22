@@ -1,5 +1,5 @@
 print("flungo", flush=True)
-# import multiprocessing
+import multiprocessing
 import pika
 import os
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
@@ -276,6 +276,7 @@ def consume_queue2():
     
     channel.basic_qos(prefetch_count=1)
     channel.basic_consume(queue=os.environ['TASK_QUEUE'], on_message_callback=callback)
+    print("Starting COnsumation", flush=True)
     channel.start_consuming()
 
 
@@ -291,9 +292,9 @@ if __name__ == '__main__':
     print("Starting consumer threads")
     # p1 = multiprocessing.Process(target=consume_queue1)
     # p1.start()
-    consume_queue2()
-    # p2 = multiprocessing.Process(target=consume_queue2)
-    # p2.start()
+    # consume_queue2()
+    p2 = multiprocessing.Process(target=consume_queue2)
+    p2.start()
 
     # # p1.join()
-    # p2.join()
+    p2.join()
