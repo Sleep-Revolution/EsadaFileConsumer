@@ -13,14 +13,16 @@ import requests
 creds = pika.PlainCredentials('server', 'server')
 
 # connection_params = pika.ConnectionParameters(os.environ['RABBITMQ_SERVER'], 5672, '/', creds)
-connection = pika.BlockingConnection(pika.ConnectionParameters(os.environ['RABBITMQ_SERVER'], 5672, '/', creds, heartbeat=60*10))
-# connection = pika.BlockingConnection(connection_params)
+# connection = pika.BlockingConnection(pika.ConnectionParameters(os.environ['RABBITMQ_SERVER'], 5672, '/', creds, heartbeat=60*10))
+# # connection = pika.BlockingConnection(connection_params)
 
-# connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-channel = connection.channel()
-channel.exchange_declare(exchange='progress_topic', exchange_type='topic')
+# # connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+# channel = connection.channel()
+# channel.exchange_declare(exchange='progress_topic', exchange_type='topic')
 queue_name = 'file_progress_queue'
-channel.queue_declare(queue=queue_name)
+# channel.queue_declare(queue=queue_name)
+
+
 import datetime
 class ProgressMessage:
     def __init__(self, stepNumber:int, taskTitle:str, progress:int, message:str=""):
