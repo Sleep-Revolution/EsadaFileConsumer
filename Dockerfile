@@ -13,4 +13,4 @@ RUN pip install -r requirements.txt
 
 # Set the entry point command to run your pipeline
 # CMD ["ls", "/app"]
-CMD ["python", "Processor.py"]
+CMD ["python3", "Processor.py"]
