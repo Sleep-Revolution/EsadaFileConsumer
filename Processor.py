@@ -160,7 +160,7 @@ def process_file(channel, message):
     print("Running matias alg.")
     basicpublish(channel, name, step, task, 0)
     Success, Message, JSONMatias = RunMatiasAlgorithm(os.path.join(projectLocation, edfName))
-    print(JSONMatias)
+    # print(JSONMatias)
     if not Success:
         basicpublish(channel, name, step, task, 2, Message)
         notes.append("Failed to run Matias algorithm")
