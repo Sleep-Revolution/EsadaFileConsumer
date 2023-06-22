@@ -1,4 +1,4 @@
-
+print("flungo")
 # import multiprocessing
 import pika
 import os
