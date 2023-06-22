@@ -1,4 +1,4 @@
-print("flungo")
+print("flungo", flush=True)
 # import multiprocessing
 import pika
 import os
@@ -51,7 +51,7 @@ def basicpublish(channel, name, taskNumber, task, status, message=""):
 def process_file(channel, message):
     
     # Centre --:> uploads == [ id int, location, etc. ]
-
+    print("Process file called ", flush=True)
     projectName = str(uuid.uuid4())
     projectLocation = os.path.join('temp_uuids', projectName)
     os.makedirs(projectLocation)
@@ -241,26 +241,26 @@ def process_file(channel, message):
     
 
 
-def consume_queue1():
-    # connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+# def consume_queue1():
+#     # connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
 
-    connection = pika.BlockingConnection(pika.ConnectionParameters(os.environ['RABBITMQ_SERVER'], 5672, '/', creds, heartbeat=60*10))
-    channel = connection.channel()
-    channel.queue_declare(queue=os.environ['PREPROCESSING_QUEUE'], durable=True)
+#     connection = pika.BlockingConnection(pika.ConnectionParameters(os.environ['RABBITMQ_SERVER'], 5672, '/', creds, heartbeat=60*10))
+#     channel = connection.channel()
+#     channel.queue_declare(queue=os.environ['PREPROCESSING_QUEUE'], durable=True)
     
-    def callback(ch, method, properties, body):
-        # Process the message from queue1
-        time.sleep(10) # Simulate a long-running task
-        print("Processed message from queue1:", body)
-        ch.basic_ack(delivery_tag=method.delivery_tag)
+#     def callback(ch, method, properties, body):
+#         # Process the message from queue1
+#         time.sleep(10) # Simulate a long-running task
+#         print("Processed message from queue1:", body)
+#         ch.basic_ack(delivery_tag=method.delivery_tag)
     
-    channel.basic_qos(prefetch_count=1)
-    channel.basic_consume(queue=os.environ['PREPROCESSING_QUEUE'], on_message_callback=callback)
-    channel.start_consuming()
+#     channel.basic_qos(prefetch_count=1)
+#     channel.basic_consume(queue=os.environ['PREPROCESSING_QUEUE'], on_message_callback=callback)
+#     channel.start_consuming()
 
 # Define a function to consume from the second queue
 def consume_queue2():
-    print("Q2 engaged")
+    print("Q2 engaged", flush=True)
     connection = pika.BlockingConnection(pika.ConnectionParameters(os.environ['RABBITMQ_SERVER'], 5672, '/', creds, heartbeat=60*10))
     channel = connection.channel()
     channel.queue_declare(queue=os.environ['TASK_QUEUE'], durable=True)
