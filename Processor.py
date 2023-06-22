@@ -257,21 +257,21 @@ def consume_queue1():
 # Define a function to consume from the second queue
 def consume_queue2():
     print("Q2 engaged")
-    # connection = pika.BlockingConnection(pika.ConnectionParameters(os.environ['RABBITMQ_SERVER'], 5672, '/', creds, heartbeat=60*10))
-    # channel = connection.channel()
-    # channel.queue_declare(queue=os.environ['TASK_QUEUE'], durable=True)
-    # print("Consuming from", os.environ['TASK_QUEUE'])
-    # def callback(ch, method, properties, body):
-    #     # Process the message from queue2
-    #     message = json.loads(body)
-    #     time = datetime.datetime.now()
-    #     process_file(ch, message)
-    #     print(f"Done Processing ({datetime.datetime.now() - time})")
-    #     ch.basic_ack(delivery_tag=method.delivery_tag)
+    connection = pika.BlockingConnection(pika.ConnectionParameters(os.environ['RABBITMQ_SERVER'], 5672, '/', creds))
+    channel = connection.channel()
+    channel.queue_declare(queue=os.environ['TASK_QUEUE'], durable=True)
+    print("Consuming from", os.environ['TASK_QUEUE'])
+    def callback(ch, method, properties, body):
+        # Process the message from queue2
+        message = json.loads(body)
+        time = datetime.datetime.now()
+        process_file(ch, message)
+        print(f"Done Processing ({datetime.datetime.now() - time})")
+        ch.basic_ack(delivery_tag=method.delivery_tag)
     
-    # channel.basic_qos(prefetch_count=1)
-    # channel.basic_consume(queue=os.environ['TASK_QUEUE'], on_message_callback=callback)
-    # channel.start_consuming()
+    channel.basic_qos(prefetch_count=1)
+    channel.basic_consume(queue=os.environ['TASK_QUEUE'], on_message_callback=callback)
+    channel.start_consuming()
 
 
 # channel.basic_qos(prefetch_count=1)
