@@ -264,8 +264,9 @@ def consume_queue2():
     connection = pika.BlockingConnection(pika.ConnectionParameters(os.environ['RABBITMQ_SERVER'], 5672, '/', creds, heartbeat=60*10))
     channel = connection.channel()
     channel.queue_declare(queue=os.environ['TASK_QUEUE'], durable=True)
-    print("Consuming from", os.environ['TASK_QUEUE'])
+    print("Consuming from", os.environ['TASK_QUEUE'], flush=True)
     def callback(ch, method, properties, body):
+        print("Poop",flush=True)
         # Process the message from queue2
         message = json.loads(body)
         time = datetime.datetime.now()
