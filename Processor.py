@@ -1,5 +1,5 @@
 
-import multiprocessing
+# import multiprocessing
 import pika
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
@@ -157,8 +157,10 @@ def process_file(channel, message):
     # Run matias algorithm
     step = step + 1
     task = 'Run Matias Algorithm'
+    print("Running matias alg.")
     basicpublish(channel, name, step, task, 0)
     Success, Message, JSONMatias = RunMatiasAlgorithm(os.path.join(projectLocation, edfName))
+    print(JSONMatias)
     if not Success:
         basicpublish(channel, name, step, task, 2, Message)
         notes.append("Failed to run Matias algorithm")
