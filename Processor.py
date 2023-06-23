@@ -1,4 +1,3 @@
-print("flungo", flush=True)
 import multiprocessing
 import pika
 import os
@@ -19,6 +18,7 @@ creds = pika.PlainCredentials('server', 'server')
 # # connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
 # channel = connection.channel()
 # channel.exchange_declare(exchange='progress_topic', exchange_type='topic')
+
 queue_name = 'file_progress_queue'
 # channel.queue_declare(queue=queue_name)
 
@@ -51,7 +51,6 @@ def basicpublish(channel, name, taskNumber, task, status, message=""):
 def process_file(channel, message):
     
     # Centre --:> uploads == [ id int, location, etc. ]
-    print("Process file called ", flush=True)
     projectName = str(uuid.uuid4())
     projectLocation = os.path.join('temp_uuids', projectName)
     os.makedirs(projectLocation)
@@ -62,7 +61,7 @@ def process_file(channel, message):
     # BUCKET/CENTRE/NAME/
     receivedLocation = os.path.join(os.environ['INDIVIDUAL_NIGHT_WAITING_ROOM'], path, name)
 
-    print('------->', routing_key)
+    print('------->', routing_key, flush=True)
     # Download the file from the location specified in the message
     exchange_name = os.environ['PROGRESS_EXCHANGE_NAME']
     exchange_type = 'topic'
@@ -159,7 +158,6 @@ def process_file(channel, message):
     # Run matias algorithm
     step = step + 1
     task = 'Run Matias Algorithm'
-    print("Running matias alg.")
     basicpublish(channel, name, step, task, 0)
     Success, Message, JSONMatias = RunMatiasAlgorithm(os.path.join(projectLocation, edfName))
     # print(JSONMatias)
@@ -260,23 +258,20 @@ def process_file(channel, message):
 
 # Define a function to consume from the second queue
 def consume_queue2():
-    print("Q2 engaged", flush=True)
     connection = pika.BlockingConnection(pika.ConnectionParameters(os.environ['RABBITMQ_SERVER'], 5672, '/', creds, heartbeat=60*10))
     channel = connection.channel()
     channel.queue_declare(queue=os.environ['TASK_QUEUE'], durable=True)
     print("Consuming from", os.environ['TASK_QUEUE'], flush=True)
     def callback(ch, method, properties, body):
-        print("Poop",flush=True)
         # Process the message from queue2
         message = json.loads(body)
         time = datetime.datetime.now()
         process_file(ch, message)
-        print(f"Done Processing ({datetime.datetime.now() - time})")
+        print(f"Done Processing ({datetime.datetime.now() - time})", flush=True)
         ch.basic_ack(delivery_tag=method.delivery_tag)
     
     channel.basic_qos(prefetch_count=1)
     channel.basic_consume(queue=os.environ['TASK_QUEUE'], on_message_callback=callback)
-    print("Starting COnsumation", flush=True)
     channel.start_consuming()
 
 
