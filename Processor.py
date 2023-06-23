@@ -216,7 +216,7 @@ def process_file(channel, message):
     centreDestinationFolder = os.path.join(os.environ['DELIVERY_FOLDER'], path)
     if not os.path.exists(centreDestinationFolder):
         os.mkdir(centreDestinationFolder)
-    processedRecordingFolder = os.path.join(centreDestinationFolder, name+":(")
+    processedRecordingFolder = os.path.join(centreDestinationFolder, name)
     if not os.path.exists(processedRecordingFolder):
         os.makedirs(processedRecordingFolder)
 
