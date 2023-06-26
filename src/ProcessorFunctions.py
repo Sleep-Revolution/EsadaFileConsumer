@@ -48,7 +48,7 @@ def NoxToEdf(sendziplocation, getziplocation):
         print("\t <- Done posting Nox zip to service")
         print(f"\t <-- It took {datetime.datetime.now() - now} seconds....")
     except Exception as e:
-        return False, f"Requests error for {dir}", e
+        return False, f"Requests error for {sendziplocation}", e
     # Check the status code
     if r.status_code > 299:
         return False, f"Status {r.status_code} for recording {dir}", None
