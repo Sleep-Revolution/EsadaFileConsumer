@@ -51,7 +51,7 @@ def NoxToEdf(sendziplocation, getziplocation):
         return False, f"Requests error for {sendziplocation}", e
     # Check the status code
     if r.status_code > 299:
-        return False, f"Status {r.status_code} for recording {dir}", None
+        return False, f"Status {r.status_code} for recording {sendziplocation} ({r.text})", None
     # Write the response to a file.
     try:
         with open(os.path.join(getziplocation, "edfzip.zip"), 'wb') as f:
