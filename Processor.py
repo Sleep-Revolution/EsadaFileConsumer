@@ -89,7 +89,7 @@ def process_file(channel, message):
 
     if not Success:
         basicpublish(channel, name, step, task, 2, Message)
-        raise Exception(f"Failed task {step}, \"{task}\"")
+        raise Exception(f"Failed task {step}, \"{task}\", reason given was \"{Message}\"")
     basicpublish(channel, name, step, task, 1)
 
 
@@ -168,13 +168,13 @@ def process_file(channel, message):
         # raise Exception(f"Failed task {step}, \"{task}\"")
         Success, Message, scoringJson = JSONMerge(scoringJson, JSONMatias)
         if not Success:
-            raise Exception("asd")
+            raise Exception(f"Failed task {step}, \"{task}\", reason given was \"{Message}\"")
         basicpublish(channel, name, step, task, 1)
         
 
 
 
-
+    print("Running Nox SAS service.", flush=True)
     step = step + 1
     task = 'Run NOX SAS Service'
     basicpublish(channel, name, step, task, 0)
@@ -185,7 +185,7 @@ def process_file(channel, message):
     else:
         Success, Message, scoringJson = JSONMerge(scoringJson, JSONNox)
         if not Success:
-            raise Exception("asd")
+            raise Exception(f"Failed task {step}, \"{task}\", reason given was \"{Message}\"")
         basicpublish(channel, name, step, task, 1)
     
 
@@ -204,7 +204,7 @@ def process_file(channel, message):
     Success, Message, ndbDestination = JsonToNdb(scoringJson, projectLocation)
     if not Success:
         basicpublish(channel, name, step, task, 2, Message)
-        raise Exception(f"Failed task {step}, \"{task}\"")
+        raise Exception(f"Failed task {step}, \"{task}\", reason given was \"{Message}\"")
     basicpublish(channel, name, step, task, 1)
 
     
