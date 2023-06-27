@@ -26,6 +26,7 @@ def NoxToEdf(sendziplocation, getziplocation):
                 file_path = os.path.join(root, file)
                 arcname = os.path.relpath(file_path, sendziplocation)
                 # Create the folder structure inside the zip file
+                print(f"z:~------------>{file}", flush=True)
                 zipf.write(file_path, arcname=os.path.join(folder_name, arcname))
 
     # Move to the beginning of the byte stream
