@@ -139,17 +139,19 @@ def process_file(channel, message):
         now = datetime.datetime.now()
         print("\t -> Posting NDB to NDB->JSON service", flush=True)
         r = requests.post(f'{os.environ["NOX_NDB_SERVICE"]}/ndb-to-json', files=files, headers=headers)
+        print(r.content)
         scoringJson = json.loads(r.content)
         print("\t <- Done posting Nox zip to service", flush=True)
         print(f"\t <-- It took {datetime.datetime.now() - now} seconds....", flush=True)
     except Exception as e:
         print("fuc,", e)
-
-    if len(scoringJson['active_scoring_name']) == 0:
-        scoringJson['active_scoring_name'] = "default-scoring-1"
-    for i in range(len(scoringJson['scorings'])):
-        if scoringJson['scorings'][i]['scoring_name'] == "":
-            scoringJson['scorings'][i]['scoring_name'] = f"default-scoring-{i+1}"
+    if scoringJson != None:
+        print("Did not get a scoring json.")
+        if len(scoringJson['active_scoring_name']) == 0:
+            scoringJson['active_scoring_name'] = "default-scoring-1"
+        for i in range(len(scoringJson['scorings'])):
+            if scoringJson['scorings'][i]['scoring_name'] == "":
+                scoringJson['scorings'][i]['scoring_name'] = f"default-scoring-{i+1}"
 
     basicpublish(channel, name, step, task, 1)
 
@@ -166,9 +168,12 @@ def process_file(channel, message):
         notes.append("Failed to run Matias algorithm")
     else:
         # raise Exception(f"Failed task {step}, \"{task}\"")
-        Success, Message, scoringJson = JSONMerge(scoringJson, JSONMatias)
-        if not Success:
-            raise Exception(f"Failed task {step}, \"{task}\", reason given was \"{Message}\"")
+        if scoringJson == None:
+            scoringJson = JSONMatias
+        else:
+            Success, Message, scoringJson = JSONMerge(scoringJson, JSONMatias)
+            if not Success:
+                raise Exception(f"Failed task {step}, \"{task}\", reason given was \"{Message}\"")
         basicpublish(channel, name, step, task, 1)
         
 
