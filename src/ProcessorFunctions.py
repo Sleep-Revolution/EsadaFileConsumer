@@ -25,6 +25,9 @@ def NoxToEdf(sendziplocation, getziplocation):
             for file in files:
                 file_path = os.path.join(root, file)
                 arcname = os.path.relpath(file_path, sendziplocation)
+                if file.endswith(".ndb"):
+                    arcname = os.path.join(folder_name, "Data.ndb")
+            
                 # Create the folder structure inside the zip file
                 print(f"z:~------------>{file}", flush=True)
                 zipf.write(file_path, arcname=os.path.join(folder_name, arcname))
