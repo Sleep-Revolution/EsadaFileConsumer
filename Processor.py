@@ -137,13 +137,13 @@ def process_file(channel, message):
     scoringJson = None
     try:
         now = datetime.datetime.now()
-        print("\t -> Posting NDB to NDB->JSON service")
+        print("\t -> Posting NDB to NDB->JSON service", flush=True)
         r = requests.post(f'{os.environ["NOX_NDB_SERVICE"]}/ndb-to-json', files=files, headers=headers)
         scoringJson = json.loads(r.content)
-        print("\t <- Done posting Nox zip to service")
-        print(f"\t <-- It took {datetime.datetime.now() - now} seconds....")
+        print("\t <- Done posting Nox zip to service", flush=True)
+        print(f"\t <-- It took {datetime.datetime.now() - now} seconds....", flush=True)
     except Exception as e:
-        print("fuc,")
+        print("fuc,", e)
 
     if len(scoringJson['active_scoring_name']) == 0:
         scoringJson['active_scoring_name'] = "default-scoring-1"
