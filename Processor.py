@@ -235,7 +235,8 @@ def process_file(channel, message):
             os.path.join(receivedLocation, file),
             processedRecordingFolder
         )
-
+    
+    shutil.rmtree(projectLocation)
 
 
 # def on_message(channel, method, properties, body):
