@@ -81,7 +81,7 @@ def process_file(channel, message):
     task = "preparatory task"
 
     def basicpublish(status=-2, message=""):
-        url = 'http://localhost:8000/meta/log'
+        url = f"{os.environ['FRONT_END_SERVER']}/meta/log"
         entry = ProgressMessage(step, task, status, message, name, centreId, datasetName=datasetName)
         print(entry.serialise())
         r = requests.post(url, json=entry.serialise())
