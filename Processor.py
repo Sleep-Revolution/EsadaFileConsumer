@@ -24,6 +24,7 @@ class STATUS_MESSAGES:
     STARTED = 0
     FINISHED = 1 
     JOBEND = 2
+    WARN = 3
 
 
 
@@ -48,25 +49,7 @@ class ProgressMessage:
             'DatasetName': self.DatasetName
         }
 
-# def basicpublish(name, taskNumber, task, status=-2, message="", fileName=None, centreId=None, channel=None):
-#     if channel is not None:
-#         channel.basic_publish(
-#                 exchange='progress_topic',
-#                 routing_key=f'file_progress.{name}',
-#                 body=ProgressMessage(taskNumber, task, status, message, centreId).serialise()
-#             )
-#     else:
-#         url = 'http://localhost:8000/meta/log'
-#         entry = ProgressMessage(taskNumber, task, status, message, fileName, centreId)
-#         # print(entry.serialise())
-#         r = requests.post(url, json=entry.serialise())
-#         pass
-
-
 def process_file(channel, message):
-
-
-        
     
     # Centre --:> uploads == [ id int, location, etc. ]
     projectName = str(uuid.uuid4())
@@ -76,7 +59,7 @@ def process_file(channel, message):
     name = message['name'] # ESR 0xyy0z
     centreId = message['centreId']
     isDataset = message['dataset']
-    datasetName = None if not isDataset else path
+    datasetName = '' if not isDataset else path
     step = -100
     task = "preparatory task"
 
@@ -93,23 +76,14 @@ def process_file(channel, message):
         receivedLocation = os.path.join(os.environ['DATASET_DIR'], path, name)
     else:
         receivedLocation = os.path.join(os.environ['INDIVIDUAL_NIGHT_WAITING_ROOM'], path, name)
-        # Download the file from the location specified in the message
+        
     step = 1 
     task = 'Convert To EDF'
-    
-    
-
-    # channel.queue_bind(queue=queue_name, exchange=exchange_name, routing_key=routing_key)
-    notes = []
     basicpublish(status=STATUS_MESSAGES.STARTED)
-    
     Success, Message, edfName = NoxToEdf(receivedLocation, projectLocation)
     if not Success:
         basicpublish(status=STATUS_MESSAGES.FAIL, message=Message)
-        # basicpublish(channel,name,setp,task, -1, f"Failed task {step}, \"{task}\", reason given was \"{Message}\"")
-        return
-        # raise Exception(f"Failed task {step}, \"{task}\", reason given was \"{Message}\"")
-    
+        return    
     basicpublish(status=STATUS_MESSAGES.FINISHED)
 
     step = step + 1
@@ -119,16 +93,9 @@ def process_file(channel, message):
     if len(oldNdbFiles) != 1:
         basicpublish(status=STATUS_MESSAGES.FAIL, message=f"Found {len(oldNdbFiles)} ndb files in extracted location.")
         return
-        # raise Exception(f"Found {len(oldNdbFiles)} ndb recordings. (expected 1)")
     oldNdbFileLocation = os.path.join(receivedLocation, oldNdbFiles[0])
     files = {'ndb_file': open(oldNdbFileLocation, 'rb').read()}
-    headers = {
-        # 'accept': 'application/json',
-        # requests won't add a boundary if this header is set when you pass files=
-        # 'Content-Type': 'multipart/form-data',
-        # 'type':'application/x-zip-compressed'
-    }
-    # Post the files to the service.
+    headers = {}
     scoringJson = None
     try:
         now = datetime.datetime.now()
@@ -138,7 +105,8 @@ def process_file(channel, message):
         print("\t <- Done posting Nox zip to service", flush=True)
         print(f"\t <-- It took {datetime.datetime.now() - now} seconds....", flush=True)
     except Exception as e:
-        print("Raised Exception while Posting ndb to json,", e)
+        basicpublish(STATUS_MESSAGES.WARN, "Failed to turn NDB into JSON.")
+        # return
     if scoringJson != None:
         print("Got a scoring json.")
         if len(scoringJson['active_scoring_name']) == 0:
@@ -146,21 +114,16 @@ def process_file(channel, message):
         for i in range(len(scoringJson['scorings'])):
             if scoringJson['scorings'][i]['scoring_name'] == "":
                 scoringJson['scorings'][i]['scoring_name'] = f"default-scoring-{i+1}"
-
-    
     basicpublish(status=STATUS_MESSAGES.FINISHED)
 
-    # Run matias algorithm
+    
     step = step + 1
     task = 'Run Matias Algorithm'
     basicpublish(status=STATUS_MESSAGES.STARTED)
     Success, Message, JSONMatias = RunMatiasAlgorithm(os.path.join(projectLocation, edfName))
-    # print(JSONMatias)
     if not Success:
-        basicpublish(status=STATUS_MESSAGES.FAIL, message=Message)
-        notes.append("Failed to run Matias algorithm")
+        basicpublish(status=STATUS_MESSAGES.WARN, message=Message)
     else:
-        # raise Exception(f"Failed task {step}, \"{task}\"")
         if scoringJson == None:
             scoringJson = JSONMatias
         else:
@@ -172,6 +135,7 @@ def process_file(channel, message):
                 return
         basicpublish(status=STATUS_MESSAGES.FINISHED)
 
+
     print("Running Nox SAS service.", flush=True)
     step = step + 1
     task = 'Run NOX SAS Service'
@@ -179,53 +143,51 @@ def process_file(channel, message):
     Success, Message, JSONNox = RunNOXSAS(receivedLocation)
     if not Success:
         basicpublish(status=STATUS_MESSAGES.FAIL, message=Message)
-        notes.append(f"Failed task {step}, \"{task}\"")
     else:
         Success, Message, scoringJson = JSONMerge(scoringJson, JSONNox)
         if not Success:
-            #raise Exception(f"Failed task {step}, \"{task}\", reason given was \"{Message}\"")
-            basicpublish(status=STATUS_MESSAGES.FAIL, 
-                    message=f"Failed task {step}, \"{task}\", reason given was \"{Message}\"",
-                )
+            basicpublish(status=STATUS_MESSAGES.FAIL, message=f"Failed task {step}, \"{task}\", reason given was \"{Message}\"",)
             return
         basicpublish(status=STATUS_MESSAGES.FINISHED)
-    
-    j = json.dumps(scoringJson)
+
+
     step = step + 1
     task = 'Get NDB'
     basicpublish(status=STATUS_MESSAGES.STARTED)
     Success, Message, ndbDestination = JsonToNdb(scoringJson, projectLocation)
     if not Success:
-        # basicpublish(channel, name, step, task, 2, Message)
-        # raise Exception(f"Failed task {step}, \"{task}\", reason given was \"{Message}\"")
         basicpublish(name, step,task, 
             status=STATUS_MESSAGES.FAIL, 
             message=f"Failed task {step}, \"{task}\", reason given was \"{Message}\"", 
             fileName=name, centreId=centreId)
         return
     basicpublish(status=STATUS_MESSAGES.FINISHED)
-    
+
+
+    step = step + 1
+    task = 'Deliver Nox Recording!'
+    basicpublish(status=STATUS_MESSAGES.STARTED)
     centreDestinationFolder = os.path.join(os.environ['DELIVERY_FOLDER'], path)
     if not os.path.exists(centreDestinationFolder):
         os.makedirs(centreDestinationFolder)
     processedRecordingFolder = os.path.join(centreDestinationFolder, name)
     if not os.path.exists(processedRecordingFolder):
         os.makedirs(processedRecordingFolder)
-
     shutil.copy(ndbDestination,processedRecordingFolder)
-
     files = os.listdir(receivedLocation)
     for file in files:
         if '.ndb' in file.lower():
             continue
         shutil.copy( os.path.join(receivedLocation, file), processedRecordingFolder)
-    
+    basicpublish(status=STATUS_MESSAGES.FINISHED)
 
-    # now deliver to teh edf folder.
+
+    step+=1
+    task="Copying EDF & JSON"
     edfDeliveryfolder = os.path.join(os.environ["EDF_DELIVERY_FOLDER"], path)
     if not os.path.exists(edfDeliveryfolder):
         os.makedirs(edfDeliveryfolder)
-
+    basicpublish(status=STATUS_MESSAGES.STARTED)
     shutil.copy(
         os.path.join(projectLocation, edfName),
         edfDeliveryfolder
@@ -233,35 +195,18 @@ def process_file(channel, message):
     jsonName = edfName.replace('.edf', '.scoring.json')
     #writie a code that writes the json object scoringJsoninto a file called jsonName in the folder edfDeliveryFolder
     json_string = json.dumps(scoringJson)
-
     # Write the JSON string to the file
     with open(os.path.join(edfDeliveryfolder, jsonName), "w") as file:
         file.write(json_string)
+    basicpublish(status=STATUS_MESSAGES.FINISHED)
     # clean up
     shutil.rmtree(projectLocation)
+    
 
     step += 1
     task = "Finished"
     basicpublish(STATUS_MESSAGES.JOBEND, "Finished job.")
 
-# def consume_queue1():
-#     # connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-
-#     connection = pika.BlockingConnection(pika.ConnectionParameters(os.environ['RABBITMQ_SERVER'], 5672, '/', creds, heartbeat=60*10))
-#     channel = connection.channel()
-#     channel.queue_declare(queue=os.environ['PREPROCESSING_QUEUE'], durable=True)
-    
-#     def callback(ch, method, properties, body):
-#         # Process the message from queue1
-#         time.sleep(10) # Simulate a long-running task
-#         print("Processed message from queue1:", body)
-#         ch.basic_ack(delivery_tag=method.delivery_tag)
-    
-#     channel.basic_qos(prefetch_count=1)
-#     channel.basic_consume(queue=os.environ['PREPROCESSING_QUEUE'], on_message_callback=callback)
-#     channel.start_consuming()
-
-# Define a function to consume from the second queue
 def consume_queue2():
     connection = pika.BlockingConnection(pika.ConnectionParameters(os.environ['RABBITMQ_SERVER'], 5672, '/', creds, heartbeat=60*10))
     channel = connection.channel()

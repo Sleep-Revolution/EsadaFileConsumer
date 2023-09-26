@@ -161,6 +161,7 @@ class RunPredict:
                 tmp = Z_G.reshape((Nrow,Ncol)).sum(axis=1)
                 warnings[k] = np.tile(tmp,(Ncol,1)).T.reshape(Ncol*Nrow)
                 results = np.concatenate((results,warnings[k][np.newaxis].T),axis=1)
+                
         results = np.concatenate((times[np.newaxis].T,results),axis=1)
         print(f"Save: {filepath}")
         if ((self.all) & (self.ensemble)):
