@@ -30,18 +30,16 @@ class STATUS_MESSAGES:
 
 import datetime
 class ProgressMessage:
-    def __init__(self, stepNumber:int, taskTitle:str, progress:int, message:str="", fileName: str="", centreId:int=None, datasetName:str=None):
+    def __init__(self, stepNumber:int, taskTitle:str, progress:int, message:str="", datasetName:str=None, nightId:int=None):
         self.StepNumber = stepNumber
         self.TaskTitle = taskTitle
         self.Progress = progress
-        self.FileName = fileName
         self.Message = message
-        self.CentreId = centreId
         self.DatasetName = datasetName
+        self.NightId = nightId
     def serialise(self) -> dict: 
         return {
-            'CentreId': self.CentreId,
-            'FileName': self.FileName,
+            'NightId': self.NightId,
             'StepNumber': self.StepNumber,
             'TaskTitle': self.TaskTitle,
             'Progress': self.Progress,
@@ -57,6 +55,7 @@ def process_file(channel, message):
     os.makedirs(projectLocation)
     path = message['path'] #centre name
     name = message['name'] # ESR 0xyy0z
+    nightId = message['nightId']
     centreId = message['centreId']
     isDataset = message['dataset']
     datasetName = '' if not isDataset else path
@@ -64,8 +63,8 @@ def process_file(channel, message):
     task = "preparatory task"
 
     def basicpublish(status=-2, message=""):
-        url = f"{os.environ['FRONT_END_SERVER']}/meta/log"
-        entry = ProgressMessage(step, task, status, message, name, centreId, datasetName=datasetName)
+        url = f"{os.environ['FRONT_END_SERVER']}/meta/log_night"
+        entry = ProgressMessage(step, task, status, message, datasetName=datasetName, nightId=nightId)
         print(entry.serialise())
         r = requests.post(url, json=entry.serialise())
         pass
