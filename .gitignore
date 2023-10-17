@@ -7,3 +7,5 @@ tmp_uuids
 tmp_uuids/*
 */__pycache__/*
 __pycache__/
+fooenv
+foofooenv
