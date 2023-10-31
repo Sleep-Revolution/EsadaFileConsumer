@@ -8,10 +8,37 @@ from src.model import noxsasapi as nsa
 import uuid
 import pathlib
 import json
-
+import io
 
 def NoxToEdf(sendziplocation, getziplocation):
-    files = {'nox_zip': open(sendziplocation, 'rb'), 'type':'application/x-zip-compressed'}
+
+    # Extract the folder name from the path
+    folder_name = os.path.basename(sendziplocation)
+
+    # Create an in-memory byte stream
+    zip_data = io.BytesIO()
+
+    # Create a zip file object
+    with zipfile.ZipFile(zip_data, mode='w', compression=zipfile.ZIP_DEFLATED) as zipf:
+        # Iterate over all the files and subdirectories
+        for root, dirs, files in os.walk(sendziplocation):
+            for file in files:
+                file_path = os.path.join(root, file)
+                arcname = os.path.relpath(file_path, sendziplocation)
+                if file.endswith(".ndb"):
+                    print("Renaming ndb file.", flush=True)
+                    arcname = os.path.join(folder_name, "Data.ndb")
+            
+                # Create the folder structure inside the zip file
+                print(f"z:~------------>{file}", flush=True)
+                zipf.write(file_path, arcname=os.path.join(folder_name, arcname))
+
+    # Move to the beginning of the byte stream
+    zip_data.seek(0)
+
+
+
+    files = {'nox_zip': zip_data, 'type':'application/x-zip-compressed'}
     headers = {
         'accept': 'application/json',
         # requests won't add a boundary if this header is set when you pass files=
@@ -26,10 +53,10 @@ def NoxToEdf(sendziplocation, getziplocation):
         print("\t <- Done posting Nox zip to service")
         print(f"\t <-- It took {datetime.datetime.now() - now} seconds....")
     except Exception as e:
-        return False, f"Requests error for {dir}", e
+        return False, f"Requests error for {sendziplocation}", e
     # Check the status code
     if r.status_code > 299:
-        return False, f"Status {r.status_code} for recording {dir}", None
+        return False, f"Status {r.status_code} for recording {sendziplocation} ({r.text})", None
     # Write the response to a file.
     try:
         with open(os.path.join(getziplocation, "edfzip.zip"), 'wb') as f:
@@ -148,3 +175,4 @@ def JsonToNdb(json, destination):
             shutil.copyfileobj(r.raw, f)
     except:
         return False, f"Failed to save the ndb for recording {dir}", None
+    return True, "NDB successful", os.path.join(destination, "Data.ndb")

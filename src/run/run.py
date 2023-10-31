@@ -97,6 +97,10 @@ class RunPredict:
 
     def Predict(self,i):
         X = self.generator.__getitem__(i)
+        if len(self.generator.Predictors_.signalsNames) != self.nsignals:
+            self.nsignals = len(self.generator.Predictors_.signalsNames)
+            self.paramsPred["SignalChannels"] = self.generator.Predictors_.signalsNames
+
         for iterx in range(X.shape[0]):
             x = X[iterx,:,:][np.newaxis,:,:]
             if iterx==0:
@@ -157,6 +161,7 @@ class RunPredict:
                 tmp = Z_G.reshape((Nrow,Ncol)).sum(axis=1)
                 warnings[k] = np.tile(tmp,(Ncol,1)).T.reshape(Ncol*Nrow)
                 results = np.concatenate((results,warnings[k][np.newaxis].T),axis=1)
+                
         results = np.concatenate((times[np.newaxis].T,results),axis=1)
         print(f"Save: {filepath}")
         if ((self.all) & (self.ensemble)):
@@ -172,6 +177,7 @@ class RunPredict:
                 DF = pd.concat((DF,Y_tmp),axis = 1)
             DF["Measure_date"] = self.generator.currentSignal.metadata["Measure date"]
         return self.NOXJSON(DF,filepathJSON)
+     
      
 
     # Function to generate the json file for the NOX software

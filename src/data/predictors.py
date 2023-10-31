@@ -105,19 +105,22 @@ class Predictors:
         if not all([i in raw.ch_names for i in channel_names]):
             # Select subset of channel_names only if present in raw ch_names:
             channel_names = np.array([i for i in channel_names if i in raw.ch_names])
-            print(f"Only {channel_names} available in {fileEDF}")
+            Warning(f"Only {channel_names} available in {fileEDF}")
         else:
             print(f"All channels available in {fileEDF}")
 
-        signalsName_tmp = []    
+        signalsName_tmp = []
         anode_tmp = []
         catode_tmp = []
         for i in self.signalsNames:
             i = i.split("-")
             assert len(i) > 1 , "Signal names need to be derivations"
-            anode_tmp.append(i[0])
-            catode_tmp.append(i[1])
-            signalsName_tmp = signalsName_tmp+[i[0]]+[i[1]]
+            if i[0] in channel_names:
+                anode_tmp.append(i[0])
+                signalsName_tmp = signalsName_tmp+[i[0]]
+            if i[1] in channel_names:
+                catode_tmp.append(i[1])
+                signalsName_tmp = signalsName_tmp+[i[1]]
 
         if "E3E4" in catode_tmp:
             signalsName_tmp = signalsName_tmp+["E3"]+["E4"]
@@ -130,7 +133,8 @@ class Predictors:
 
         if "E3E4" in catode_tmp:
             subchannels = channel_names[ind]
-            rename_tmp = {i:i+"-E3E4" for i in subchannels[channel_category=="eeg"]}
+            f_subchnl = subchannels[channel_category=="eeg"]
+            rename_tmp = {i:i+"-E3E4" for i in f_subchnl}
             edf.set_eeg_reference(ref_channels=ref_channels[0], ch_type=ref_channels[1])
             edf.rename_channels(rename_tmp)
 
@@ -155,6 +159,10 @@ class Predictors:
         indcha = [i for i in range(len(edf.ch_names)) if edf.ch_names[i] in self.signalsNames]
         signals = []
         
+        if len(indcha) != len(self.signalsNames):
+            Warning(f"Only 3 signals derivations available {np.array(edf.ch_names)[np.array(indcha)]} rather than the 8 required {self.signalsNames}")
+            self.signalsNames = np.array(edf.ch_names)[np.array(indcha)]
+
         for i in range(len(indcha)):
             if i==0:
                 signals_tmp, times = edf[edf.ch_names[indcha[i]]]
@@ -163,6 +171,8 @@ class Predictors:
             
             signals.append(signals_tmp)
         
+
+
         # print(edf.info['meas_date']+timedelta(seconds=times[0]),edf.info['meas_date']+timedelta(seconds=times[-1]))
         ########### Sanity checks #############
         if self.times_stamps != times[1]:
