@@ -106,19 +106,23 @@ def process_file(channel, message):
     except Exception as e:
         basicpublish(STATUS_MESSAGES.WARN, "Failed to turn NDB into JSON.")
         # return
+
     if scoringJson is not None:
         print("Got a scoring json.")
-        # Use the get method to provide a default value if 'active_scoring_name' does not exist
+
+        # Set default scoring names if they are missing or empty
+        for i, scoring in enumerate(scoringJson.get('scorings', [])):
+            if not scoring.get('scoring_name'):
+                scoring['scoring_name'] = f"default-scoring-{i+1}"
+
+        # Check if 'active_scoring_name' is in scoringJson and is not None or empty
         if not scoringJson.get('active_scoring_name'):
-            scoringJson['active_scoring_name'] = "default-scoring-1"
-        # Loop through the 'scorings' list, if it exists
-        if 'scorings' in scoringJson and isinstance(scoringJson['scorings'], list):
-            for i, scoring in enumerate(scoringJson['scorings']):
-                if not scoring.get('scoring_name'):
-                    scoring['scoring_name'] = f"default-scoring-{i+1}"
-        else:
-            print("scoringJson is None, cannot process file.")
-                
+            # Use the first scoring name if there are any scorings available
+            if scoringJson.get('scorings'):
+                scoringJson['active_scoring_name'] = scoringJson['scorings'][0]['scoring_name']
+            else:
+                scoringJson['active_scoring_name'] = "default-scoring-1"
+                    
     basicpublish(status=STATUS_MESSAGES.FINISHED)
 
     
