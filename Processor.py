@@ -107,12 +107,18 @@ def process_file(channel, message):
         basicpublish(STATUS_MESSAGES.WARN, "Failed to turn NDB into JSON.")
         # return
     if scoringJson != None:
-        print("Got a scoring json.")
-        if len(scoringJson['active_scoring_name']) == 0:
-            scoringJson['active_scoring_name'] = "default-scoring-1"
+        print("Got a scoring json.")    
+
         for i in range(len(scoringJson['scorings'])):
             if scoringJson['scorings'][i]['scoring_name'] == "":
                 scoringJson['scorings'][i]['scoring_name'] = f"default-scoring-{i+1}"
+        
+        if 'active_scoring_name' not in scoringJson or len(scoringJson['active_scoring_name']) == 0:
+            if len(scoringJson['scorings']) > 0:
+                scoringJson['active_scoring_name'] = scoringJson['scorings'][0]['scoring_name']
+            else:
+                scoringJson['active_scoring_name'] = ""
+                
     basicpublish(status=STATUS_MESSAGES.FINISHED)
 
     
