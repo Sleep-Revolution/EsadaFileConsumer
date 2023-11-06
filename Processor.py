@@ -47,6 +47,14 @@ class ProgressMessage:
             'DatasetName': self.DatasetName
         }
 
+def set_permissions(folder_path):
+    for root, dirs, files in os.walk(folder_path):
+        for d in dirs:
+            os.chmod(os.path.join(root, d), 0o777)
+        for f in files:
+            os.chmod(os.path.join(root, f), 0o666)  # 0o666 is for read and write permissions for everyone
+
+
 def process_file(channel, message):
     
     # Centre --:> uploads == [ id int, location, etc. ]
@@ -167,10 +175,6 @@ def process_file(channel, message):
     if not Success:
 
         basicpublish(status=STATUS_MESSAGES.FAIL, message=Message)
-        # basicpublish(name, step,task, 
-        #     status=STATUS_MESSAGES.FAIL, 
-        #     message=f"Failed task {step}, \"{task}\", reason given was \"{Message}\"", 
-        #     fileName=name, centreId=centreId)
         return
     basicpublish(status=STATUS_MESSAGES.FINISHED)
 
@@ -181,15 +185,20 @@ def process_file(channel, message):
     centreDestinationFolder = os.path.join(os.environ['DELIVERY_FOLDER'], path)
     if not os.path.exists(centreDestinationFolder):
         os.makedirs(centreDestinationFolder)
+        os.chmod(centreDestinationFolder, 0o777)  # Set permissions for the main directory
+
     processedRecordingFolder = os.path.join(centreDestinationFolder, name)
     if not os.path.exists(processedRecordingFolder):
         os.makedirs(processedRecordingFolder)
+        os.chmod(processedRecordingFolder, 0o777)  # Set permissions for the subdirectory
+
     shutil.copy(ndbDestination,processedRecordingFolder)
     files = os.listdir(receivedLocation)
     for file in files:
         if '.ndb' in file.lower():
             continue
         shutil.copy( os.path.join(receivedLocation, file), processedRecordingFolder)
+    set_permissions(processedRecordingFolder)
     basicpublish(status=STATUS_MESSAGES.FINISHED)
 
 
@@ -202,7 +211,7 @@ def process_file(channel, message):
     shutil.copy(
         os.path.join(projectLocation, edfName),
         edfDeliveryfolder
-        )
+        )   
     jsonName = edfName.replace('.edf', '.scoring.json')
     #writie a code that writes the json object scoringJsoninto a file called jsonName in the folder edfDeliveryFolder
     json_string = json.dumps(scoringJson)
