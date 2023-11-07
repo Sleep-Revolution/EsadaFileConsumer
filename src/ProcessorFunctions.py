@@ -166,9 +166,9 @@ def JsonToNdb(json, destination):
         print("\t <- Done posting NDB to service")
         print(f"\t <-- It took {datetime.datetime.now() - now} seconds....")
     except Exception as e:
-        return False, f"NDB requests error for {dir}", e
+        return False, f"NDB requests error for {json}", e
     if r.status_code > 299:
-        return False, f"Status {r.status_code} for recording {dir}", None
+        return False, f"Status {r.status_code} for following json {json}", None
     # Write the response to a file.
     try:
         with open(os.path.join(destination,"Data.ndb"), 'wb') as f:

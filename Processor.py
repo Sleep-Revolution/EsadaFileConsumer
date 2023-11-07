@@ -173,7 +173,6 @@ def process_file(channel, message):
     basicpublish(status=STATUS_MESSAGES.STARTED)
     Success, Message, ndbDestination = JsonToNdb(scoringJson, projectLocation)
     if not Success:
-
         basicpublish(status=STATUS_MESSAGES.FAIL, message=Message)
         return
     basicpublish(status=STATUS_MESSAGES.FINISHED)
