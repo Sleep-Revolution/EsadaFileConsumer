@@ -129,7 +129,7 @@ def process_file(channel, message):
             if scoringJson.get('scorings'):
                 scoringJson['active_scoring_name'] = scoringJson['scorings'][0]['scoring_name']
             else:
-                scoringJson['active_scoring_name'] = "default-scoring-1"
+                scoringJson['active_scoring_name'] = ""
                     
     basicpublish(status=STATUS_MESSAGES.FINISHED)
 
