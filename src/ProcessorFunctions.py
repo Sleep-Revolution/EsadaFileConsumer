@@ -168,7 +168,7 @@ def JsonToNdb(json, destination):
     except Exception as e:
         return False, f"NDB requests error for", e
     if r.status_code > 299:
-        return False, f"Status {r.status_code} for following json, {r.json}", None
+        return False, f"Status {r.status_code} for following json, {r.json=()}", None
     # Write the response to a file.
     try:
         with open(os.path.join(destination,"Data.ndb"), 'wb') as f:
