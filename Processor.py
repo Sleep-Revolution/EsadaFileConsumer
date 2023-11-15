@@ -47,6 +47,14 @@ class ProgressMessage:
             'DatasetName': self.DatasetName
         }
 
+def set_permissions(folder_path):
+    for root, dirs, files in os.walk(folder_path):
+        for d in dirs:
+            os.chmod(os.path.join(root, d), 0o777)
+        for f in files:
+            os.chmod(os.path.join(root, f), 0o666)  # 0o666 is for read and write permissions for everyone
+
+
 def process_file(channel, message):
     
     # Centre --:> uploads == [ id int, location, etc. ]
@@ -106,13 +114,23 @@ def process_file(channel, message):
     except Exception as e:
         basicpublish(STATUS_MESSAGES.WARN, "Failed to turn NDB into JSON.")
         # return
-    if scoringJson != None:
+
+    if scoringJson is not None:
         print("Got a scoring json.")
-        if len(scoringJson['active_scoring_name']) == 0:
-            scoringJson['active_scoring_name'] = "default-scoring-1"
-        for i in range(len(scoringJson['scorings'])):
-            if scoringJson['scorings'][i]['scoring_name'] == "":
-                scoringJson['scorings'][i]['scoring_name'] = f"default-scoring-{i+1}"
+
+        # Set default scoring names if they are missing or empty
+        for i, scoring in enumerate(scoringJson.get('scorings', [])):
+            if not scoring.get('scoring_name'):
+                scoring['scoring_name'] = f"default-scoring-{i+1}"
+
+        # Check if 'active_scoring_name' is in scoringJson and is not None or empty
+        if not scoringJson.get('active_scoring_name'):
+            # Use the first scoring name if there are any scorings available
+            if scoringJson.get('scorings'):
+                scoringJson['active_scoring_name'] = scoringJson['scorings'][0]['scoring_name']
+            else:
+                scoringJson['active_scoring_name'] = ""
+                    
     basicpublish(status=STATUS_MESSAGES.FINISHED)
 
     
@@ -155,10 +173,7 @@ def process_file(channel, message):
     basicpublish(status=STATUS_MESSAGES.STARTED)
     Success, Message, ndbDestination = JsonToNdb(scoringJson, projectLocation)
     if not Success:
-        basicpublish(name, step,task, 
-            status=STATUS_MESSAGES.FAIL, 
-            message=f"Failed task {step}, \"{task}\", reason given was \"{Message}\"", 
-            fileName=name, centreId=centreId)
+        basicpublish(status=STATUS_MESSAGES.FAIL, message=Message)
         return
     basicpublish(status=STATUS_MESSAGES.FINISHED)
 
@@ -169,15 +184,20 @@ def process_file(channel, message):
     centreDestinationFolder = os.path.join(os.environ['DELIVERY_FOLDER'], path)
     if not os.path.exists(centreDestinationFolder):
         os.makedirs(centreDestinationFolder)
+        os.chmod(centreDestinationFolder, 0o777)  # Set permissions for the main directory
+
     processedRecordingFolder = os.path.join(centreDestinationFolder, name)
     if not os.path.exists(processedRecordingFolder):
         os.makedirs(processedRecordingFolder)
+        os.chmod(processedRecordingFolder, 0o777)  # Set permissions for the subdirectory
+
     shutil.copy(ndbDestination,processedRecordingFolder)
     files = os.listdir(receivedLocation)
     for file in files:
         if '.ndb' in file.lower():
             continue
         shutil.copy( os.path.join(receivedLocation, file), processedRecordingFolder)
+    set_permissions(processedRecordingFolder)
     basicpublish(status=STATUS_MESSAGES.FINISHED)
 
 
@@ -190,7 +210,7 @@ def process_file(channel, message):
     shutil.copy(
         os.path.join(projectLocation, edfName),
         edfDeliveryfolder
-        )
+        )   
     jsonName = edfName.replace('.edf', '.scoring.json')
     #writie a code that writes the json object scoringJsoninto a file called jsonName in the folder edfDeliveryFolder
     json_string = json.dumps(scoringJson)
