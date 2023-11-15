@@ -98,7 +98,7 @@ class Predictors:
             cathode = self.cathode_psg
             rename_category = self.rename_category_psg
             
-        raw = mne.io.read_raw_edf(fileEDF,verbose=self.verbose)
+        raw = mne.io.read_raw_edf(fileEDF,verbose=self.verbose,exclude=self.exclude)
          #channels to use in re-referencing (deriving) the conventional SAS channels
         
         # check existence of channel_names in raw ch_names
@@ -122,16 +122,16 @@ class Predictors:
                 catode_tmp.append(i[1])
                 signalsName_tmp = signalsName_tmp+[i[1]]
 
-        if "E3E4" in catode_tmp:
-            signalsName_tmp = signalsName_tmp+["E3"]+["E4"]
-        
+        if ("E3" in catode_tmp) & ("E4" in catode_tmp):
+            signalsName_tmp = signalsName_tmp+["E3E4"]
+
         ind = [i for i in range(len(channel_names)) if channel_names[i] in signalsName_tmp]
         
         edf=raw.pick_channels(channel_names[ind].tolist())
         edf.set_channel_types(dict(zip(channel_names[ind], channel_category[ind])))
         edf.load_data(verbose=True)
-
-        if "E3E4" in catode_tmp:
+        
+        if "E3E4" in signalsName_tmp:
             subchannels = channel_names[ind]
             f_subchnl = subchannels[channel_category=="eeg"]
             rename_tmp = {i:i+"-E3E4" for i in f_subchnl}
@@ -155,13 +155,17 @@ class Predictors:
             except MemoryError as mem:
                 print("Ran out of memory.....")
                 exit()
-
+        
+        
         indcha = [i for i in range(len(edf.ch_names)) if edf.ch_names[i] in self.signalsNames]
         signals = []
+        
         
         if len(indcha) != len(self.signalsNames):
             Warning(f"Only 3 signals derivations available {np.array(edf.ch_names)[np.array(indcha)]} rather than the 8 required {self.signalsNames}")
             self.signalsNames = np.array(edf.ch_names)[np.array(indcha)]
+        else:
+            print(f"Starting predicting using channels {(np.array(edf.ch_names)[np.array(indcha)])}")
 
         for i in range(len(indcha)):
             if i==0:

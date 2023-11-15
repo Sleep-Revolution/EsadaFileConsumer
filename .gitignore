@@ -9,3 +9,6 @@ tmp_uuids/*
 __pycache__/
 fooenv
 foofooenv
+*.ipynb_checkpoints/*
+.ipynb_checkpoints/
+.ipynb_checkpoints/*

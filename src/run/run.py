@@ -25,6 +25,7 @@ from src.preprocessing.harmonisation import *
 
 from src.model.model import *
 from src.model.noxsasapi import *
+from src.model.MixtureModels import *
 
 from src.utils.yamlutils import *
 from src.utils.save_xp import *
@@ -55,6 +56,7 @@ class RunPredict:
         with open(confyml) as file:
             params = yaml.load(file, Loader=loader)
         self.pipeline_prepro = Pipeline([(str(estimator), estimator) for estimator in params["Preprocessing"]])
+        # ['AF3-E3E4', 'AF4-E3E4', 'AF7-E3E4', 'AF8-E3E4', 'E1-E4', 'E2-E3', 'E2-AFZ', 'E3-AFZ']
 
         self.paramsPred = {"SignalChannels":['AF3-E3E4', 'AF4-E3E4', 'AF7-E3E4', 'AF8-E3E4', 'E1-E4', 'E2-E3', 'E2-AFZ', 'E3-AFZ'],
                            "ALL":True,
@@ -121,13 +123,47 @@ class RunPredict:
 
         # if isinstance(y,(np.ndarray)):
         #     y = y.tolist()
-
         if self.ensemble:
             Y = np.sum(Y, axis = 0)
             Y = Y/Y.sum(axis=1,keepdims=True)
             Hp_pred = np.argmax(Y, axis=1)
+        else:
+            Hp_pred = np.argmax(Y,axis=1)
+        
+        
+        
+        ######### GRAY AREAS #############
+        Xl = np.zeros((Y.shape[0],100))
 
-        Hp_pred = np.argmax(Y,axis=1)
+        for n in range(Y.shape[0]):
+            Xl[n,:] = np.argmax(np.random.multinomial(1, Y[n,:], size=100),axis=1)
+
+        Xl,classes = aggregate_raters(Xl)
+        
+        MM = MixtModel(E=100,distribution="Multinomial")
+        MM.fit(Xl,method="K-means",init="k-means++")
+        Z_G = (MM.distribution.predict(Xl)[:,0]==0)*1
+
+
+        
+        ######### FIXING REM #############
+        g=0
+        stage = Hp_pred[g]
+        while not stage in [1,2,3]:
+            Hp_pred[g] = 0
+            pred = Y[g,:]
+            # pred[0] =  pred[0]+max(pred)-pred[0]+0.01
+            pred[0] = 1
+            pred[:1] = 0
+            # Y[g,:] = pred/sum(pred)
+            Y[g,:] = pred/sum(pred)
+            Z_G[g] = 0
+            g=g+1
+            
+            stage = Hp_pred[g]
+            
+
+        
 
         
         SignalName = np.array(self.generator.currentSignal.metadata["SignalName"])
@@ -135,8 +171,9 @@ class RunPredict:
         filepathJSON = self.paramsPred["PredPath"]+".json"
         
 
-        u2 = ((Y)*(1-Y)).sum(axis=1)
-        Z_G = (u2>self.paramsPred["GrayAreaThreshold"])*1
+        # u2 = ((Y)*(1-Y)).sum(axis=1)
+        # Z_G = (u2>self.paramsPred["GrayAreaThreshold"])*1
+        
 
         warnings = {"10":[],"30":[],"60":[],"120":[]}
         results = np.concatenate((Hp_pred[np.newaxis].T,Y,Z_G[np.newaxis].T),axis=1)
@@ -199,7 +236,7 @@ class RunPredict:
         stoptime2YYYYMMDDHHMMSS = [i.strftime("%Y-%m-%dT%H:%M:%S.000000") for i in stop_time]
         
         JSONHeaders = { "version": "1.0",
-        "active_scoring_name": "MatiasAlgorithm",
+        "active_scoring_name": "aSAGAalgorithm",
         "scorings": []}
         ListCORE = []
         
