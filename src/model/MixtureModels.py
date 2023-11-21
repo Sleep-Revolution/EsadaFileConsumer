@@ -232,7 +232,7 @@ class Model:
     predict_proba(self,X):
     """
         
-    def __init__(self,**kwargs):
+    def __init__(self,U2dist,**kwargs):
         self.verbose = kwargs.get("verbose", 0)
         self.M = kwargs.get("M", None)
         self.E = kwargs.get("E", None)
@@ -240,6 +240,7 @@ class Model:
         self.model_init = kwargs.get("model_init", None)
         self.threshold = kwargs.get("threshold", None)
         self.SClist = None
+        self.U2dist = U2dist
         
     def KMeans(self,X,M,seed=12,**kwargs):
         init = kwargs.get("init", "k-means++")
@@ -283,11 +284,22 @@ class Model:
     
     def searchTreshold(self,X,end=0.01):
         self.K = X.shape[1]
-
-        if sum(X[0,:])==self.E:
-            u2 = ((X/self.E)*(1-X/self.E)).sum(axis=1)
-        else:
-            u2 = ((X)*(1-X)).sum(axis=1)
+        
+        if self.U2dist == "unlikeability":
+            if sum(X[0,:])==self.E:
+                u2 = ((X/self.E)*(1-X/self.E)).sum(axis=1)
+            else:
+                u2 = ((X)*(1-X)).sum(axis=1)
+        
+        if self.U2dist == "margin":
+            if sum(X[0,:])==self.E:
+                p = (X/self.E)
+                p.sort(axis=1)
+                u2 = 1-(p[:,X.shape[1]-1]-p[:,X.shape[1]-2])
+            else:
+                p = X.copy()
+                p.sort(axis=1)
+                u2 = 1-(p[:,X.shape[1]-1]-p[:,X.shape[1]-2])
 
 
         listthreshold = np.arange(0,np.quantile(u2,1).round(1)+end,end).round(2)
@@ -535,8 +547,18 @@ class Model:
         Sclusters =clusters 	
         Sk = np.array(list(range(len(self.model["theta_i"]["pi"]))))
         u2p = []
-        for p in self.model["theta_i"]["theta_i_m"]:
-            u2p.append((1-sum(p**2)))
+        
+        if self.U2dist == "unlikeability":
+            for p in self.model["theta_i"]["theta_i_m"]:
+                u2p.append((1-sum(p**2)))
+        
+        if self.U2dist == "margin":
+            for p in self.model["theta_i"]["theta_i_m"]:
+                ptmp = p.copy()
+                ptmp.sort()
+                u2p.append((1-(ptmp[len(ptmp)-1]-ptmp[len(ptmp)-2])))
+        
+        
         u2p = np.array(u2p)
 
         ub = u2p[u2p<threshold]
@@ -711,6 +733,8 @@ class MixtModel(Model):
     def __init__(self,distribution,**kwargs):
         super().__init__(**kwargs)
         filename = threshold = kwargs.get("filename",None)
+        self.U2dist = kwargs.get("U2dist","unlikeability")
+        
         if not filename is None:
             MM = self.load(filename)
             for k in MM.__dict__.keys():
@@ -720,12 +744,15 @@ class MixtModel(Model):
             self.distributionName = distribution
             if distribution == "Multinomial":
                 self.distribution = MixtMultinomial(**kwargs)
+                
             if distribution == "Dirichlet":
                 self.distribution = MixtDirichlet(**kwargs)
+        
             
     def fit(self,X,**kwargs):
         self.M = kwargs.get("M", None)
         self.threshold = kwargs.get("threshold",None)
+        kwargs["U2dist"] = self.U2dist
         
         if self.M is None:
             Mmax = int(X.shape[0]**0.3)
@@ -776,7 +803,7 @@ class MixtModel(Model):
         self.model_init["theta_i"]["theta_i_m"] = self.model_init["theta_i"]["theta_i_m"][reorder,:]
         self.model_init["clusters"] = np.array([reorder[m] for m in self.model_init["clusters"]])
         self.model_init["p_ij"] = self.model_init["p_ij"][:,reorder]
-
+        
         self.distribution.model = self.model
         self.distribution.model_init = self.model_init
 
@@ -787,9 +814,17 @@ class MixtModel(Model):
             self.distribution.threshold = self.threshold
 
         u2p = []
-        for p in self.model["theta_i"]["theta_i_m"]:
-            u2p.append((1-sum(p**2)))
+        if self.U2dist == "unlikeability":
+            for p in self.model["theta_i"]["theta_i_m"]:
+                u2p.append((1-sum(p**2)))
+        
+        if self.U2dist == "margin":
+            for p in self.model["theta_i"]["theta_i_m"]:
+                ptmp = p.copy()
+                ptmp.sort()
+                u2p.append((1-(ptmp[len(ptmp)-1]-ptmp[len(ptmp)-2])))
         u2p = np.array(u2p)
+        
         self.SClist = [np.where(u2p<self.distribution.threshold)[0],np.where(u2p>=self.distribution.threshold)[0]]
         self.distribution.SClist = [np.where(u2p<self.distribution.threshold)[0],np.where(u2p>=self.distribution.threshold)[0]]
         
