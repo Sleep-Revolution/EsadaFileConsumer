@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import OneHotEncoder
 from ipywidgets import IntProgress
 from IPython.display import display
+import pickle
 
 """
 ####################################################################################
@@ -245,7 +246,7 @@ class Model:
         max_iter = kwargs.get("max_iter", 100)
         
         np.random.seed(seed)
-        model_init = skc.MiniBatchKMeans(init=init,n_clusters=M,max_iter=max_iter,n_init='auto').fit(X)
+        model_init = skc.MiniBatchKMeans(init=init,n_clusters=M,max_iter=max_iter).fit(X)
         
         p_ij = OneHotEncoder(handle_unknown='ignore').fit_transform(model_init.labels_[np.newaxis].T).toarray()
         model = self.params_init(X,p_ij)
@@ -709,14 +710,23 @@ class MixtDirichlet(Model):
 class MixtModel(Model):
     def __init__(self,distribution,**kwargs):
         super().__init__(**kwargs)
-        self.distributionName = distribution
-        if distribution == "Multinomial":
-            self.distribution = MixtMultinomial(**kwargs)
-        if distribution == "Dirichlet":
-            self.distribution = MixtDirichlet(**kwargs)
+        filename = threshold = kwargs.get("filename",None)
+        if not filename is None:
+            MM = self.load(filename)
+            for k in MM.__dict__.keys():
+                setattr(self, k, getattr(MM, k))
+            del MM
+        else:
+            self.distributionName = distribution
+            if distribution == "Multinomial":
+                self.distribution = MixtMultinomial(**kwargs)
+            if distribution == "Dirichlet":
+                self.distribution = MixtDirichlet(**kwargs)
             
     def fit(self,X,**kwargs):
         self.M = kwargs.get("M", None)
+        self.threshold = kwargs.get("threshold",None)
+        
         if self.M is None:
             Mmax = int(X.shape[0]**0.3)
             if self.distributionName == "Multinomial":
@@ -773,6 +783,8 @@ class MixtModel(Model):
         if self.threshold is None:
             end = kwargs.get("end", 0.01)
             self.distribution.searchTreshold(X,end=end)
+        else:
+            self.distribution.threshold = self.threshold
 
         u2p = []
         for p in self.model["theta_i"]["theta_i_m"]:
@@ -780,6 +792,16 @@ class MixtModel(Model):
         u2p = np.array(u2p)
         self.SClist = [np.where(u2p<self.distribution.threshold)[0],np.where(u2p>=self.distribution.threshold)[0]]
         self.distribution.SClist = [np.where(u2p<self.distribution.threshold)[0],np.where(u2p>=self.distribution.threshold)[0]]
+        
+    def save(self,filename="model.pickle"):
+        with open(filename,"wb") as f:
+            pickle.dump(self,f)
+    
+    def load(self,filename):
+        with open(filename,"rb") as f:
+            MM =  pickle.load(f)
+        return MM
+    
             
 
         

@@ -189,17 +189,17 @@ pathfinal = '/main/home/gabrielj@sleep.ru.is/ESADA/FINAL/'
 for file in os.listdir(path):
     print("Start",file)
     onetimeuuid = uuid.uuid4()
-    # onetimeuuid = "f8d01cbe-8885-47b9-80d9-bf656da9288c"
+    onetimeuuid = "4929d3c2-d27e-4fc7-8e32-88e4b0ef2082"
     tmpFolder = 'temp_uuids'
     projectLocation = os.path.join(tmpFolder, str(onetimeuuid))
     os.makedirs(projectLocation, exist_ok=True)
     Success =True
-    # edfName = "20210721T153728 - 797fd.edf"
+    edfName = "20210427T230008 - e9974.edf"
     
     # print(os.path.join(path,file))
     # Success, Message, JSONN = RunNOXSAS(os.path.join(path,file))
     
-    Success, Message, edfName = NoxToEdf(os.path.join(path,file), projectLocation)
+    # Success, Message, edfName = NoxToEdf(os.path.join(path,file), projectLocation)
     if Success:
         # Success, Message, JSONN = RunNOXSAS(os.path.join(path,file))
         Success, Message, JSONM = RunMatiasAlgorithm(os.path.join(projectLocation, edfName))

@@ -140,8 +140,7 @@ class RunPredict:
 
         Xl,classes = aggregate_raters(Xl)
         
-        MM = MixtModel(E=100,distribution="Multinomial")
-        MM.fit(Xl,method="K-means",init="k-means++")
+        MM = MixtModel(filename="./src/run/MM10scorer_aSAGA.pickle",distribution="Multinomial")
         Z_G = (MM.distribution.predict(Xl)[:,0]==0)*1
 
 
