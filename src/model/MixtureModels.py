@@ -1,18 +1,12 @@
 import os
 os.environ["OMP_NUM_THREADS"]="1"
 import numpy as np
-from statsmodels.stats.inter_rater import fleiss_kappa, aggregate_raters
-import matplotlib.pyplot as plt
+from statsmodels.stats.inter_rater import aggregate_raters
 import sklearn.cluster as skc
-from sklearn.metrics import silhouette_score,confusion_matrix
 from scipy.stats import multinomial,dirichlet
 from scipy.optimize import minimize
-import statsmodels.api as sm
 import pandas as pd
-import matplotlib.pyplot as plt
 from sklearn.preprocessing import OneHotEncoder
-from ipywidgets import IntProgress
-from IPython.display import display
 import pickle
 
 """
@@ -352,13 +346,7 @@ class Model:
                 model_list = []
                 
                 list_BIC = []
-                f = IntProgress(min=0, max=len(listM),description="M="+str(listM[0])+"/"+str(listM[-1]))
-                if verbose>0:
-                    display(f)
                 for m in listM:
-                    
-                    f.value += 1
-                    f.description = "M="+str(m)+"/"+str(listM[-1])
                     self.M=m
                     nuM = self.M+self.M*self.K
                     mod = skc.MiniBatchKMeans(n_clusters=m,init=init,max_iter=max_iter).fit(X)
@@ -391,11 +379,7 @@ class Model:
                 list_BIC = model_init["BIC"]
             else:
                 model_list = []
-                f = IntProgress(min=0, max=len(listM),description="M="+str(listM[0])+"/"+str(listM[-1]))
-                display(f)
                 for m in listM:
-                    f.value += 1
-                    f.description = "M="+str(m)+"/"+str(listM[-1])
                     self.M=m
                     model_list.append(self.smallEM(X,M=m,init=init,maxEM=maxEM))
                 
