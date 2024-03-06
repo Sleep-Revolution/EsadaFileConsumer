@@ -77,13 +77,20 @@ def process_file(channel, message):
         r = requests.post(url, json=entry.serialise())
         pass
 
+
+    
     # BUCKET/CENTRE/NAME/
     receivedLocation = ""
     if isDataset:
         receivedLocation = os.path.join(os.environ['DATASET_DIR'], path, name)
     else:
         receivedLocation = os.path.join(os.environ['INDIVIDUAL_NIGHT_WAITING_ROOM'], path, name)
-        
+
+    # make sure the received location exists
+    if not os.path.exists(receivedLocation):
+        basicpublish(status=STATUS_MESSAGES.FAIL, message=f"Received location {receivedLocation} does not exist.")
+        return
+
     step = 1 
     task = 'Convert To EDF'
     basicpublish(status=STATUS_MESSAGES.STARTED)
