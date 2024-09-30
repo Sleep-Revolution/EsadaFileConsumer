@@ -91,6 +91,7 @@ def RunMatiasAlgorithm(edfLocation):
         x = Run.RunPredict(edfLocation)
         y = x.launch()
     except Exception as e:	
+        print(e)
         return False, f"Failed to run Matias algorithm for recording {edfLocation}", e
     return True, "Success", y
 
