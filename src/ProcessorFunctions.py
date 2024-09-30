@@ -10,6 +10,8 @@ import pathlib
 import json
 import io
 
+import traceback
+
 def NoxToEdf(sendziplocation, getziplocation):
 
     # Extract the folder name from the path
@@ -92,6 +94,7 @@ def RunMatiasAlgorithm(edfLocation):
         y = x.launch()
     except Exception as e:	
         print(e)
+        traceback.print_tb(e.__traceback__)
         return False, f"Failed to run Matias algorithm for recording {edfLocation}", e
     return True, "Success", y
 
