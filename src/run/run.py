@@ -110,6 +110,13 @@ class RunPredict:
             else:
                 y = np.concatenate((y,self.model.predict(x)),axis=0)
         Y = y.copy()
+
+        # remove nan from Y 
+        ind = np.where(np.isnan(Y[:,0,0]))[0]
+        if len(ind)>0:
+            Y = np.delete(Y,ind,axis=0)
+            self.uncertain = True
+            self.numSignal = Y.shape[0]
         # print("After prediction",y.shape)
         times = self.generator.currentSignal.metadata["TimeFromStart"]
         nepochs = y.shape[1]
@@ -120,98 +127,105 @@ class RunPredict:
 
         times = times.reshape((nepochs,int(30/self.generator.Predictors_.times_stamps)))
         times = times[:,0]
-
-        # if isinstance(y,(np.ndarray)):
-        #     y = y.tolist()
-        if self.ensemble:
-            Y = np.sum(Y, axis = 0)
-            Y = Y/Y.sum(axis=1,keepdims=True)
-            Hp_pred = np.argmax(Y, axis=1)
-        else:
-            Hp_pred = np.argmax(Y,axis=1)
-        
-        
-        
-        ######### GRAY AREAS #############
-        Xl = np.zeros((Y.shape[0],100))
-
-        for n in range(Y.shape[0]):
-            Xl[n,:] = np.argmax(np.random.multinomial(1, Y[n,:], size=100),axis=1)
-
-        Xl,classes = aggregate_raters(Xl)
-        
-        MM = MixtModel(filename="./src/run/MM10scorer_aSAGA.pickle",distribution="Multinomial",U2dist="margin")
-        Z_G = (MM.distribution.predict(Xl)[:,0]==0)*1
-
-
-        
-        ######### FIXING REM #############
-        g=0
-        stage = Hp_pred[g]
-        while not stage in [1,2,3]:
-            Hp_pred[g] = 0
-            pred = Y[g,:]
-            # pred[0] =  pred[0]+max(pred)-pred[0]+0.01
-            pred[0] = 1
-            pred[:1] = 0
-            # Y[g,:] = pred/sum(pred)
-            Y[g,:] = pred/sum(pred)
-            Z_G[g] = 0
-            g=g+1
-            
-            stage = Hp_pred[g]
-            
-
-        
-
-        
-        SignalName = np.array(self.generator.currentSignal.metadata["SignalName"])
-        filepath = os.path.join(self.paramsPred["PredPath"],self.generator.Predictors_.allEdf[i-1]+".csv")
-        filepathJSON = self.paramsPred["PredPath"]+".json"
-        
-
-        # u2 = ((Y)*(1-Y)).sum(axis=1)
-        # Z_G = (u2>self.paramsPred["GrayAreaThreshold"])*1
-        
-
-        warnings = {"10":[],"30":[],"60":[],"120":[]}
-        results = np.concatenate((Hp_pred[np.newaxis].T,Y,Z_G[np.newaxis].T),axis=1)
-        for k in list(warnings.keys()):
-
-            if Z_G.shape[0] % (int(k)*2) != 0:
-                Nrow = int(Z_G.shape[0] / (int(k)*2))+1
-                padd = Nrow*(int(k)*2)
-                Z_G_tmp = np.zeros(padd)
-                Z_G_tmp[:Z_G.shape[0]] = Z_G
-
-                Nrow = int(Z_G_tmp.shape[0]/(int(k)*2))
-                Ncol = int(int(k)*2)
-                tmp = Z_G_tmp.reshape((Nrow,Ncol)).sum(axis=1)
-                tmp = np.tile(tmp,(Ncol,1)).T.reshape(Ncol*Nrow)
-                warnings[k] = tmp[:Z_G.shape[0]]
-                results = np.concatenate((results,warnings[k][np.newaxis].T),axis=1)
-
+        try:
+            # if isinstance(y,(np.ndarray)):
+            #     y = y.tolist()
+            if self.ensemble:
+                Y = np.sum(Y, axis = 0)
+                Y = Y/Y.sum(axis=1,keepdims=True)
+                Hp_pred = np.argmax(Y, axis=1)
             else:
-                Nrow = int(Z_G.shape[0]/(int(k)*2))
-                Ncol = int(int(k)*2)
-                tmp = Z_G.reshape((Nrow,Ncol)).sum(axis=1)
-                warnings[k] = np.tile(tmp,(Ncol,1)).T.reshape(Ncol*Nrow)
-                results = np.concatenate((results,warnings[k][np.newaxis].T),axis=1)
+                Hp_pred = np.argmax(Y,axis=1)
+            
+            
+            
+            ######### GRAY AREAS #############
+            Xl = np.zeros((Y.shape[0],100))
+
+            for n in range(Y.shape[0]):
+                Xl[n,:] = np.argmax(np.random.multinomial(1, Y[n,:], size=100),axis=1)
+
+            Xl,classes = aggregate_raters(Xl)
+            
+            MM = MixtModel(filename="C:/backup/Users/gabrielj/work/GitHub/EsadaFileConsumer/src/run/MM10scorer_aSAGA.pickle",distribution="Multinomial",U2dist="margin")
+            Z_G = (MM.distribution.predict(Xl)[:,0]==0)*1
+
+
+            
+            ######### FIXING REM #############
+            g=0
+            stage = Hp_pred[g]
+            while ((not stage in [1,2,3]) and g<(len(Hp_pred)-1)):
+                Hp_pred[g] = 0
+                pred = Y[g,:]
+                # pred[0] =  pred[0]+max(pred)-pred[0]+0.01
+                pred[0] = 1
+                pred[:1] = 0
+                # Y[g,:] = pred/sum(pred)
+                Y[g,:] = pred/sum(pred)
+                Z_G[g] = 0
+                g=g+1
+
+                stage = Hp_pred[g]
                 
-        results = np.concatenate((times[np.newaxis].T,results),axis=1)
-        print(f"Save: {filepath}")
-        if ((self.all) & (self.ensemble)):
-            columns = ["Times","Ens_Hypno"]+["Ens_"+k for k in list(self.SCORE_DICT.keys())]+["GrayArea"]+["Warning_"+k for k in list(warnings.keys())]
-            DF = pd.DataFrame(results,columns = columns)
-            for h in range(self.nsignals):
-                Y_tmp = np.array(y[h])
-                Y_tmp = Y_tmp/Y_tmp.sum(axis=1,keepdims=True)
-                Hp_pred = np.argmax(Y_tmp,axis=1)
-                Y_tmp = np.concatenate((Hp_pred[np.newaxis].T,Y_tmp),axis=1)
-                columns = [SignalName[h]+"_Hypno"]+[SignalName[h]+"_"+k for k in list(self.SCORE_DICT.keys())]
-                Y_tmp = pd.DataFrame(Y_tmp,columns = columns)
-                DF = pd.concat((DF,Y_tmp),axis = 1)
+
+            
+
+            
+            SignalName = np.array(self.generator.currentSignal.metadata["SignalName"])
+            filepath = os.path.join(self.paramsPred["PredPath"],self.generator.Predictors_.allEdf[i-1]+".csv")
+            filepathJSON = self.paramsPred["PredPath"]+".json"
+            
+
+            # u2 = ((Y)*(1-Y)).sum(axis=1)
+            # Z_G = (u2>self.paramsPred["GrayAreaThreshold"])*1
+            
+
+            warnings = {"10":[],"30":[],"60":[],"120":[]}
+            results = np.concatenate((Hp_pred[np.newaxis].T,Y,Z_G[np.newaxis].T),axis=1)
+            for k in list(warnings.keys()):
+
+                if Z_G.shape[0] % (int(k)*2) != 0:
+                    Nrow = int(Z_G.shape[0] / (int(k)*2))+1
+                    padd = Nrow*(int(k)*2)
+                    Z_G_tmp = np.zeros(padd)
+                    Z_G_tmp[:Z_G.shape[0]] = Z_G
+
+                    Nrow = int(Z_G_tmp.shape[0]/(int(k)*2))
+                    Ncol = int(int(k)*2)
+                    tmp = Z_G_tmp.reshape((Nrow,Ncol)).sum(axis=1)
+                    tmp = np.tile(tmp,(Ncol,1)).T.reshape(Ncol*Nrow)
+                    warnings[k] = tmp[:Z_G.shape[0]]
+                    results = np.concatenate((results,warnings[k][np.newaxis].T),axis=1)
+
+                else:
+                    Nrow = int(Z_G.shape[0]/(int(k)*2))
+                    Ncol = int(int(k)*2)
+                    tmp = Z_G.reshape((Nrow,Ncol)).sum(axis=1)
+                    warnings[k] = np.tile(tmp,(Ncol,1)).T.reshape(Ncol*Nrow)
+                    results = np.concatenate((results,warnings[k][np.newaxis].T),axis=1)
+                    
+            results = np.concatenate((times[np.newaxis].T,results),axis=1)
+            print(f"Save: {filepath}")
+            if ((self.all) & (self.ensemble)):
+                columns = ["Times","Ens_Hypno"]+["Ens_"+k for k in list(self.SCORE_DICT.keys())]+["GrayArea"]+["Warning_"+k for k in list(warnings.keys())]
+                DF = pd.DataFrame(results,columns = columns)
+                for h in range(self.nsignals):
+                    Y_tmp = np.array(y[h])
+                    Y_tmp = Y_tmp/Y_tmp.sum(axis=1,keepdims=True)
+                    Hp_pred = np.argmax(Y_tmp,axis=1)
+                    Y_tmp = np.concatenate((Hp_pred[np.newaxis].T,Y_tmp),axis=1)
+                    columns = [SignalName[h]+"_Hypno"]+[SignalName[h]+"_"+k for k in list(self.SCORE_DICT.keys())]
+                    Y_tmp = pd.DataFrame(Y_tmp,columns = columns)
+                    DF = pd.concat((DF,Y_tmp),axis = 1)
+                DF["Measure_date"] = self.generator.currentSignal.metadata["Measure date"]
+        except:
+            DF = pd.DataFrame([-1],columns=["Ens_Hypno"])
             DF["Measure_date"] = self.generator.currentSignal.metadata["Measure date"]
+            DF["GrayArea"] = 0
+            filepath = os.path.join(self.paramsPred["PredPath"],self.generator.Predictors_.allEdf[i-1]+".csv")
+            filepathJSON = self.paramsPred["PredPath"]+".json"
+            
         return self.NOXJSON(DF,filepathJSON)
      
      
@@ -243,13 +257,23 @@ class RunPredict:
             "scoring_name": JSONHeaders["active_scoring_name"],
             "markers":[]}
         
-        JSONCORE_U = {
-            "scoring_name": JSONHeaders["active_scoring_name"]+"_uncertain",
-            "markers":[]}
+        if self.uncertain:
+            JSONCORE_U = {
+                "scoring_name": JSONHeaders["active_scoring_name"]+"_uncertain_"+str(self.numSignal),
+                "markers":[]}
+        else:
+            JSONCORE_U = {
+                "scoring_name": JSONHeaders["active_scoring_name"]+"_uncertain",
+                "markers":[]}
         
         for i in range(nepoch):
+            ss = int(predcsv["Ens_Hypno"].iloc[i])
+            if ss>-1:
+                ss = sleepstage[ss]
+            else:
+                ss = "invalid"
             markers = {
-                "label": sleepstage[int(predcsv["Ens_Hypno"].iloc[i])],
+                "label": ss,
                 "signal":   None,
                 "start_time": starttime2YYYYMMDDHHMMSS[i],
                 "stop_time": stoptime2YYYYMMDDHHMMSS[i],
@@ -258,6 +282,7 @@ class RunPredict:
             JSONCORE["markers"].append(markers)
 
             if predcsv["GrayArea"].iloc[i]==1:
+                
                 new_marker_unc = {
                     "label": sleepstage[int(predcsv["Ens_Hypno"].iloc[i])]+"_uncertain",
                     "signal": None,
@@ -268,9 +293,12 @@ class RunPredict:
                 JSONCORE_U["markers"].append(new_marker_unc)
             else:
                 JSONCORE_U["markers"].append(markers)
-
-        JSONHeaders["scorings"].append(JSONCORE)
-        JSONHeaders["scorings"].append(JSONCORE_U)
+    	
+        if self.uncertain:
+            JSONHeaders["scorings"].append(JSONCORE_U)
+        else:
+            JSONHeaders["scorings"].append(JSONCORE)
+            JSONHeaders["scorings"].append(JSONCORE_U)
         return JSONHeaders
         # with open(filepath, 'w') as outfile:
         #     json.dump(JSONHeaders, outfile, indent=4)
