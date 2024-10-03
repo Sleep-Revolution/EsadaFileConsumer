@@ -37,10 +37,8 @@ def NoxToEdf(sendziplocation, getziplocation):
 
     # Move to the beginning of the byte stream
     zip_data.seek(0)
-
-
-
-files = {'file': zip_data, 'type':'application/x-zip-compressed'}
+    
+    files = {'file': zip_data, 'type':'application/x-zip-compressed'}
     headers = {
         'accept': 'application/json',
         # requests won't add a boundary if this header is set when you pass files=
