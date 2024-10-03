@@ -40,20 +40,44 @@ def NoxToEdf(sendziplocation, getziplocation):
 
 
 
-    files = {'nox_zip': zip_data, 'type':'application/x-zip-compressed'}
+files = {'file': zip_data, 'type':'application/x-zip-compressed'}
     headers = {
         'accept': 'application/json',
         # requests won't add a boundary if this header is set when you pass files=
         # 'Content-Type': 'multipart/form-data',
         # 'type':'application/x-zip-compressed'
     }
-    # Post the files to the service.
+
     try:
         now = datetime.datetime.now()
         print("\t -> Posting Nox zip to service")
-        r = requests.post(f'{os.environ["NOX_EDF_SERVICE"]}/nox-to-edf?get_active_recording_time=false&get_all_scorings=false&export_scoring=true', files=files, headers=headers, stream=True)
+        r = requests.post(f'{os.environ["NOX_EDF_SERVICE"]}/jobs', files=files, headers=headers, stream=True)
         print("\t <- Done posting Nox zip to service")
         print(f"\t <-- It took {datetime.datetime.now() - now} seconds....")
+        if r.status_code != 200:
+            raise Exception(f"Failed to run Nox edf for {file}, Error:{r.text}")
+        results = r.json()
+
+        jobid= results["job_id"]
+        print(results)
+        flag = True
+        h=0
+        
+        while flag:
+            r = requests.get(f'{os.environ["NOX_EDF_SERVICE"]}/jobs/{jobid}', headers=headers, stream=True)
+            results = r.json()
+            print(f"Waiting job {h} seconds")
+            time.sleep(30)
+            h += 30
+            
+            if results["status"]=="SUCCESS":
+                flag = False
+                print(results["status"])
+            if r.status_code != 200:
+                raise Exception(f"Failed to run Nox edf for {jobid}, Error:{r.text}")
+
+        r = requests.get(f'{os.environ["NOX_EDF_SERVICE"]}/files/{jobid}', headers=headers)
+
     except Exception as e:
         return False, f"Requests error for {sendziplocation}", e
     # Check the status code
@@ -61,8 +85,10 @@ def NoxToEdf(sendziplocation, getziplocation):
         return False, f"Status {r.status_code} for recording {sendziplocation} ({r.text})", None
     # Write the response to a file.
     try:
+        
         with open(os.path.join(getziplocation, "edfzip.zip"), 'wb') as f:
-            shutil.copyfileobj(r.raw, f)
+            f.write(r.content)
+            f.close()
     except:
         return False, f"Failed to save the edf.zip for recording {dir}", None
 
@@ -82,9 +108,13 @@ def NoxToEdf(sendziplocation, getziplocation):
     
     # Find the new zip file name
     efl = list(filter(lambda x: '.edf' in x, os.listdir(os.path.join(getziplocation))))
-    if len(efl) != 1:
-        return False, f"Did not find 1 edf file in list of new files. {efl}", None
-
+    if len(efl) > 1:
+        efl = [f for f in efl if '.scoring.edf' not in f]
+    else:
+        if len(efl) == 1:
+            return True, "success", efl[0]
+        else:
+            return False, f"Failed to find edf file for {getziplocation} ", None
     return True, "success", efl[0]
 
 
