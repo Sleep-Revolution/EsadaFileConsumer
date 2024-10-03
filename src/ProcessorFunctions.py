@@ -30,6 +30,83 @@ def NoxToEdf(sendziplocation, getziplocation):
                 if file.endswith(".ndb"):
                     print("Renaming ndb file.", flush=True)
                     arcname = os.path.join(folder_name, "Data.ndb")
+
+                # Create the folder structure inside the zip file
+                print(f"z:~------------>{file}", flush=True)
+                zipf.write(file_path, arcname=os.path.join(folder_name, arcname))
+
+    # Move to the beginning of the byte stream
+    zip_data.seek(0)
+
+
+
+    files = {'nox_zip': zip_data, 'type':'application/x-zip-compressed'}
+    headers = {
+        'accept': 'application/json',
+        # requests won't add a boundary if this header is set when you pass files=
+        # 'Content-Type': 'multipart/form-data',
+        # 'type':'application/x-zip-compressed'
+    }
+    # Post the files to the service.
+    try:
+        now = datetime.datetime.now()
+        print("\t -> Posting Nox zip to service")
+        r = requests.post(f'{os.environ["NOX_EDF_SERVICE"]}/nox-to-edf?get_active_recording_time=false&get_all_scorings=false&export_scoring=true', files=files, headers=headers, stream=True)
+        print("\t <- Done posting Nox zip to service")
+        print(f"\t <-- It took {datetime.datetime.now() - now} seconds....")
+    except Exception as e:
+        return False, f"Requests error for {sendziplocation}", e
+    # Check the status code
+    if r.status_code > 299:
+        return False, f"Status {r.status_code} for recording {sendziplocation} ({r.text})", None
+    # Write the response to a file.
+    try:
+        with open(os.path.join(getziplocation, "edfzip.zip"), 'wb') as f:
+            shutil.copyfileobj(r.raw, f)
+    except:
+        return False, f"Failed to save the edf.zip for recording {dir}", None
+
+    try:
+    # Extract the zip file to the destination folder.
+        print("\t -> Extracting Zipped EDF folder")
+
+        with zipfile.ZipFile(os.path.join(getziplocation, "edfzip.zip"), 'r') as f:
+            f.extractall(os.path.join(getziplocation))
+            f.close()
+        print("\t <- Done extracting Zipped EDF folder into", os.path.join(getziplocation))
+    except:
+        return False, f"Failed to extract response from nox for recording {dir} ({getziplocation})", None
+
+    # Delete the zip file.
+    os.remove(os.path.join(getziplocation, "edfzip.zip"))
+
+    # Find the new zip file name
+    efl = list(filter(lambda x: '.edf' in x, os.listdir(os.path.join(getziplocation))))
+    if len(efl) != 1:
+        return False, f"Did not find 1 edf file in list of new files. {efl}", None
+    return True, "success", efl[0]
+
+
+
+
+def NoxToEdfv2(sendziplocation, getziplocation):
+
+    # Extract the folder name from the path
+    folder_name = os.path.basename(sendziplocation)
+
+    # Create an in-memory byte stream
+    zip_data = io.BytesIO()
+
+    # Create a zip file object
+    with zipfile.ZipFile(zip_data, mode='w', compression=zipfile.ZIP_DEFLATED) as zipf:
+        # Iterate over all the files and subdirectories
+        for root, dirs, files in os.walk(sendziplocation):
+            for file in files:
+                file_path = os.path.join(root, file)
+                arcname = os.path.relpath(file_path, sendziplocation)
+                if file.endswith(".ndb"):
+                    print("Renaming ndb file.", flush=True)
+                    arcname = os.path.join(folder_name, "Data.ndb")
             
                 # Create the folder structure inside the zip file
                 print(f"z:~------------>{file}", flush=True)
@@ -37,7 +114,6 @@ def NoxToEdf(sendziplocation, getziplocation):
 
     # Move to the beginning of the byte stream
     zip_data.seek(0)
-    
     files = {'file': zip_data, 'type':'application/x-zip-compressed'}
     headers = {
         'accept': 'application/json',
