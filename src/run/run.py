@@ -88,6 +88,7 @@ class RunPredict:
                                                type_study=self.type_study)
         self.nfile = len(self.generator.list_id)
         self.NOXSASJSON = []
+        self.uncertain=False
     
     #################################     UNCOMMENT  ONLY FOR VALIDATION          ###########################################################
     # def MathiasValidation(self,file):
