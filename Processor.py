@@ -52,6 +52,8 @@ def set_permissions(folder_path):
         for d in dirs:
             os.chmod(os.path.join(root, d), 0o777)
         for f in files:
+            if('.docx' in f):
+                continue
             os.chmod(os.path.join(root, f), 0o666)  # 0o666 is for read and write permissions for everyone
 
 
