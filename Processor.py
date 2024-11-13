@@ -169,19 +169,20 @@ def process_file(channel, message):
         basicpublish(status=STATUS_MESSAGES.FINISHED)
 
 
-    print("Running Nox SAS service.", flush=True)
-    step = step + 1
-    task = 'Run NOX SAS Service'
-    basicpublish(status=STATUS_MESSAGES.STARTED)
-    Success, Message, JSONNox = RunNOXSAS(receivedLocation)
-    if not Success:
-        basicpublish(status=STATUS_MESSAGES.FAIL, message=Message)
-    else:
-        Success, Message, scoringJson = JSONMerge(scoringJson, JSONNox)
-        if not Success:
-            basicpublish(status=STATUS_MESSAGES.FAIL, message=f"Failed task {step}, \"{task}\", reason given was \"{Message}\"",)
-            return
-        basicpublish(status=STATUS_MESSAGES.FINISHED)
+    # This will always fail, which is why we are commenting it out. We decided to run the aSAGA algorithm instead.
+    # print("Running Nox SAS service.", flush=True)
+    # step = step + 1
+    # task = 'Run NOX SAS Service'
+    # basicpublish(status=STATUS_MESSAGES.STARTED)
+    # Success, Message, JSONNox = RunNOXSAS(receivedLocation)
+    # if not Success:
+    #     basicpublish(status=STATUS_MESSAGES.FAIL, message=Message)
+    # else:
+    #     Success, Message, scoringJson = JSONMerge(scoringJson, JSONNox)
+    #     if not Success:
+    #         basicpublish(status=STATUS_MESSAGES.FAIL, message=f"Failed task {step}, \"{task}\", reason given was \"{Message}\"",)
+    #         return
+    #     basicpublish(status=STATUS_MESSAGES.FINISHED)
 
 
     step = step + 1
