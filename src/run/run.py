@@ -48,6 +48,7 @@ class RunPredict:
             'REM': 4.}
         
         # ToDo: Put this into the environmental variables.
+        time1 = datetime.now()
         ModelPath = os.environ["MATIAS_MODEL_PATH"]#"matiasmodel/sas_scoring_models/E1M2_iqr_std_2021-11-04_135554/"  
       
         confyml = "src/run/PreProConf.yaml"
@@ -57,7 +58,6 @@ class RunPredict:
             params = yaml.load(file, Loader=loader)
         self.pipeline_prepro = Pipeline([(str(estimator), estimator) for estimator in params["Preprocessing"]])
         # ['AF3-E3E4', 'AF4-E3E4', 'AF7-E3E4', 'AF8-E3E4', 'E1-E4', 'E2-E3', 'E2-AFZ', 'E3-AFZ']
-
         self.paramsPred = {"SignalChannels":['AF3-E3E4', 'AF4-E3E4', 'AF7-E3E4', 'AF8-E3E4', 'E1-E4', 'E2-E3', 'E2-AFZ', 'E3-AFZ'],
                            "ALL":True,
                            "Ensemble":True,
@@ -68,8 +68,9 @@ class RunPredict:
                            }
         # self.paramsPred['SignalChannels'] = [_.lower() for _ in self.paramsPred['SignalChannels'] ]
         self.model = keras.models.load_model(ModelPath)
-        print(self.model.summary())
-        logging.info("Model Loaded")
+        time2 = datetime.now()
+        # print(self.model.summary())
+        logging.info("Model Loaded, Time to load model: %s", time2-time1)
         self.nsignals = len(self.paramsPred["SignalChannels"])
         self.all = self.paramsPred.get("ALL",False)
         self.ensemble = self.paramsPred.get("Ensemble",False)

@@ -26,6 +26,10 @@ def NoxToEdf(sendziplocation, getziplocation):
         for root, dirs, files in os.walk(sendziplocation):
             for file in files:
                 file_path = os.path.join(root, file)
+                # check if the file truly exists
+                if not os.path.exists(file_path):
+                    print(f"File {file_path} does not exist", flush=True)
+                    continue
                 arcname = os.path.relpath(file_path, sendziplocation)
                 if file.endswith(".ndb"):
                     print("Renaming ndb file.", flush=True)

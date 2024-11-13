@@ -1,6 +1,8 @@
 import multiprocessing
 import pika
 import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 import json
 import time
@@ -72,6 +74,10 @@ def process_file(channel, message):
     datasetName = '' if not isDataset else path
     step = -100
     task = "preparatory task"
+
+    # a bit of a fancy border around the print statement
+    print(f"{'='*50}\nProcessing {path}/{name}\n{'='*50}\n", flush=True)
+
 
     def basicpublish(status=-2, message=""):
         url = f"{os.environ['FRONT_END_SERVER']}/meta/log_night"
