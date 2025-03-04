@@ -54,7 +54,7 @@ def NoxToEdf(sendziplocation, getziplocation):
     # Post the files to the service.
     try:
         now = datetime.datetime.now()
-        print("\t -> Posting Nox zip to service")
+        print("\t -> Posting Nox zip to service", flush=True)
         r = requests.post(f'{os.environ["NOX_EDF_SERVICE"]}/nox-to-edf?get_active_recording_time=false&get_all_scorings=false&export_scoring=true', files=files, headers=headers, stream=True)
         print("\t <- Done posting Nox zip to service")
         print(f"\t <-- It took {datetime.datetime.now() - now} seconds....")
